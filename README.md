@@ -1,6 +1,6 @@
 # Cloud Storage Testing
 
-This is a cloud storage platform aimed to be cheap and customizable. Right now, we are giving access to 100 GB of cloud storage free of charge for testing purposes. Later, we are planning to launch with a $5 monthly plan for 2 TB.
+This is a cloud storage system aimed to be cheap and customizable. Right now, we are giving access to 100 GB of cloud storage free of charge for testing purposes. Later, we are planning to launch with a $5 monthly plan for 2 TB.
 
 # Installation
 
@@ -22,6 +22,39 @@ Make sure you have [python](https://www.python.org/downloads/) and [git](https:/
 
 5. Back in the terminal, run ```python3 cloud_interface.py```.
 
+## Interface
+
+This system comes with a command line interface.
+
+| Command | Description |
+|---------|-------------|
+| ls [directory] | List files in a directory |
+| cd [directory] | Change to a different directory |
+| b | Change to the previous directory |
+| ul [source] [destination] | Upload a file |
+| dl [source] [destination] | Download a file |
+| mv [source] [destination] | Move or rename a file |
+| rm [file path] | Remove a file |
+| quota | Show how much storage is left |
+| pwd [new password] | Change password |
+| q | Exit |
+
+Here are examples of how you can use these commands:
+
+| Command | Description |
+|---------|-------------|
+| ul file1.txt | Uploads file1.txt to the current directory |
+| ul file2.txt file_2.txt | Uploads file2.txt to the current directory as file_2.txt |
+| ul file3.txt /documents/ | Uploads file3.txt to the documents directory. Automatically creates the documents directory if it does not already exist |
+| ul file4.txt /documents/file_4.txt | Uploads file4.txt to the documents directory as file_4.txt |
+| dl file1.txt | Downloads file1.txt to the current directory |
+| dl file2.txt file_2.txt | Downloads file2.txt to the current directory as file_2.txt |
+| dl file3.txt /home/sakshine108/Downloads/ | Downloads file3.txt to the Downloads directory |
+| dl file4.txt /home/sakshine108/Downloads/file_4.txt | Downloads file4.txt to the Downloads directory as file_4.txt |
+| mv file1.txt file_1.txt | Renames file1.txt to file_1.txt |
+| mv file2.txt /documents/ | Moves file2.txt to the documents directory |
+| mv file3.txt /documents/file_3.txt | Moves file3.txt to the documents folder as file_3.txt |
+
 # Reporting Issues
 
-If you encounter any issues or find a bug, please [email](mailto:sakshine108@gmail.com) us. We will try our best to find a solution.
+If you encounter any issues, find a bug, or have any suggestions, please [email](mailto:sakshine108@gmail.com) us. We will try our best to find a solution.
