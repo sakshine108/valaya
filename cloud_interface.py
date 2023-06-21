@@ -7,6 +7,7 @@
 # cloud.download(src, dst, prog=True) --> downloads a file and displays the download progress
 # cloud.upload(src, dst, prog=True) --> uploads a file and displays the upload progress
 # cloud.quota() --> shows how many bytes of storage you used and the maximum amount you can have
+# cloud.change_pwd(new_pwd) --> changes the account password
 # cloud.init(usr, pwd) --> initializes the api, setting the username and password (this function must be called before any other function is called)
 
 import cloud
@@ -113,7 +114,7 @@ def command(inp):
                 b = str(q2) + ' Bytes'
 
         print(f'{a} of {b} used.')
-    elif req == 'pwd':
+    elif req == 'passwd':
         try:
             if len(params) > 0:
                 c = input('Your password: ')
