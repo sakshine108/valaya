@@ -29,6 +29,7 @@ This system comes with a command line interface.
 | Command | Description |
 |---------|-------------|
 | ls [directory] | List files in a directory |
+| ls -l [directory] | List files in a directory along with file details |
 | cd [directory] | Change to a different directory |
 | b | Change to the previous directory |
 | ul [source] [destination] | Upload a file |
@@ -36,6 +37,7 @@ This system comes with a command line interface.
 | mv [source] [destination] | Move or rename a file |
 | rm [file path] | Remove a file |
 | quota | Show how much storage is left |
+| quota -l | Show how much storage is left in bytes |
 | passwd [new password] | Change password |
 | q | Exit |
 
