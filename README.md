@@ -36,8 +36,13 @@ This system comes with a command line interface.
 | mv [source] [destination] | Move or rename a file |
 | rm [file path] | Remove a file |
 | quota | Show how much storage is left |
-| pwd [new password] | Change password |
+| passwd [new password] | Change password |
 | q | Exit |
+
+* All paths are relative to the current directory unless a "/" is placed before the path making it absolute
+* For uploading a file, the source is the file path on the computer and the destination is the desired file path on the cloud
+* For downloading a file, the source is the file path on the cloud and the destination is the desired file path on the computer
+* For moving a file, the source is the file path on the cloud you want to move and the destination is the modified file path
 
 Here are examples of how you can use these commands:
 
@@ -45,14 +50,14 @@ Here are examples of how you can use these commands:
 |---------|-------------|
 | ul file1.txt | Uploads file1.txt to the current directory |
 | ul file2.txt file_2.txt | Uploads file2.txt to the current directory as file_2.txt |
-| ul file3.txt /documents/ | Uploads file3.txt to the documents directory. Automatically creates the documents directory if it does not already exist |
-| ul file4.txt /documents/file_4.txt | Uploads file4.txt to the documents directory as file_4.txt |
+| ul file3.txt /documents/ | Uploads file3.txt to the documents folder located in the root directory. Automatically creates the documents folder if it does not already exist |
+| ul file4.txt /documents/file_4.txt | Uploads file4.txt to the documents folder as file_4.txt |
 | dl file1.txt | Downloads file1.txt to the current directory |
 | dl file2.txt file_2.txt | Downloads file2.txt to the current directory as file_2.txt |
-| dl file3.txt /home/sakshine108/Downloads/ | Downloads file3.txt to the Downloads directory |
-| dl file4.txt /home/sakshine108/Downloads/file_4.txt | Downloads file4.txt to the Downloads directory as file_4.txt |
+| dl file3.txt /home/sakshine108/Downloads/ | Downloads file3.txt to the Downloads folder in the computer |
+| dl file4.txt /home/sakshine108/Downloads/file_4.txt | Downloads file4.txt to the Downloads folder as file_4.txt |
 | mv file1.txt file_1.txt | Renames file1.txt to file_1.txt |
-| mv file2.txt /documents/ | Moves file2.txt to the documents directory |
+| mv file2.txt /documents/ | Moves file2.txt to the documents folder |
 | mv file3.txt /documents/file_3.txt | Moves file3.txt to the documents folder as file_3.txt |
 
 # Reporting Issues
