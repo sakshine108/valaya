@@ -19,6 +19,8 @@ f = open('account.txt', 'r').readlines()
 usr, pwd = [sub.replace('\n', '') for sub in f]
 
 def command(inp):
+    global pwd
+    
     req = inp.split(' ')[0]
     params = inp.split(' ')[1:]
 
@@ -128,6 +130,8 @@ def command(inp):
                     f = open("account.txt", "w")
                     f.write(f'{usr}\n{new_pwd}')
                     f.close()
+
+                    pwd = new_pwd
 
                     print(f"Password changed to '{new_pwd}'.")
                 else:
