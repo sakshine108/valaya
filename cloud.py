@@ -183,7 +183,7 @@ def move(src='', dst=''):
     res = res.decode('utf-8')
     res = json.loads(res)
 
-    if 'error' in res.values():
+    if 'error' in res.keys():
         raise Exception(res['error'])
         return
 
@@ -218,7 +218,7 @@ def remove(f=''):
     res = res.decode('utf-8')
     res = json.loads(res)
 
-    if 'error' in res.values():
+    if 'error' in res.keys():
         raise Exception(res['error'])
         return
 
@@ -244,7 +244,7 @@ def quota():
     res = res.decode('utf-8')
     res = json.loads(res)
 
-    if 'error' in res.values():
+    if 'error' in res.keys():
         raise Exception(res['error'])
         return
 
@@ -285,7 +285,7 @@ def download(src='', dst='', prog=True):
     res = res.decode('utf-8')
     res = json.loads(res)
 
-    if 'error' in res.values():
+    if 'error' in res.keys():
         raise Exception(res['error'])
         return
 
@@ -372,7 +372,7 @@ def upload(src='', dst='', prog=True):
     res = res.decode('utf-8')
     res = json.loads(res)
 
-    if 'error' in res.values():
+    if 'error' in res.keys():
         raise Exception(res['error'])
         return
 
@@ -428,7 +428,7 @@ def change_pwd(new_pwd=''):
     res = res.decode('utf-8')
     res = json.loads(res)
 
-    if 'error' in res.values():
+    if 'error' in res.keys():
         raise Exception(res['error'])
         return
 
