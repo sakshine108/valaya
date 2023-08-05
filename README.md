@@ -45,6 +45,7 @@ This system comes with a command line interface.
 * For uploading a file, the source is the file path on the computer and the destination is the desired file path on the cloud
 * For downloading a file, the source is the file path on the cloud and the destination is the desired file path on the computer
 * For moving a file, the source is the file path on the cloud you want to move and the destination is the modified file path
+* Currently you can only upload and download a maximum of 100 GB per day
 
 Here are examples of how you can use these commands:
 
