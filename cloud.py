@@ -5,7 +5,10 @@ import os
 import threading
 from tqdm import tqdm
 from datetime import datetime
-import pyAesCrypt
+
+from cryptography.hazmat.primitives import hashes, padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 
 key = ''
 
@@ -19,6 +22,8 @@ f_list = []
 c_dir = ''
 usr = ''
 pwd = ''
+
+chunk_size = 1048576
 
 def _is_valid_file_name(f):
     valid_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-!@#%^&*()_/.'
@@ -292,7 +297,7 @@ def download(src='', dst='', prog=True):
         raise Exception(res['error'])
         return
 
-    file_size = res['filesize']
+    file_size = res['filesize'] - 16
     current_file_size = 0
 
     s.send(b'0')
@@ -300,19 +305,21 @@ def download(src='', dst='', prog=True):
     if prog == True:
         pbar = tqdm(total=int(file_size / 1024 / 1024), desc=dst.split('/')[-1], unit='MB')
 
-    o = dst + '.aes'
-
     if os.path.exists(dst):
         os.remove(dst)
 
-    if os.path.exists(o):
-        os.remove(o)
+    iv = s.recv(16)
 
-    with open(o, 'ab') as f:
+    cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+
+    with open(dst, 'wb') as f:
         while True:
-            data = s.recv(1048576)
-            f.write(data)
-            current_file_size += len(data)
+            chunk = s.recv(chunk_size)
+            decrypted_chunk = decryptor.update(chunk)
+            f.write(decrypted_chunk)
+
+            current_file_size += len(chunk)
 
             if prog == True:
                 pbar.n = int(current_file_size / 1024 / 1024)
@@ -320,30 +327,30 @@ def download(src='', dst='', prog=True):
 
             if current_file_size == file_size:
                 break
-
+    
     if prog == True:
         pbar.close()
 
-        with open(o, "rb") as fIn:
-            try:
-                with open(dst, "wb") as fOut:
-                    pyAesCrypt.decryptStream(fIn, fOut, key, 1048576)
-            except ValueError:
-                remove(dst)
-
-        os.remove(o)
-
 def _send_bytes(s, src):
+    iv = os.urandom(16)
+
+    cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+
+    s.send(iv)
+
     with open(src, 'rb') as f:
         while True:
-            chunk = f.read(1048576)
+            chunk = f.read(chunk_size)
 
             if not chunk:
                 break
 
-            s.send(chunk)
+            encrypted_chunk = encryptor.update(chunk)
+            s.send(encrypted_chunk)
 
-    os.remove(src)
+        encrypted_chunk = encryptor.finalize()
+        s.send(encrypted_chunk)
 
 upload_prog = 0
 
@@ -374,15 +381,7 @@ def upload(src='', dst='', prog=True):
         raise Exception(f"'{dst}' is not a valid file name.")
         return
 
-    o = src + '.aes'
-
-    with open(src, "rb") as fIn:
-        with open(o, "wb") as fOut:
-            pyAesCrypt.encryptStream(fIn, fOut, key, 1048576)
-
-    src = o
-
-    file_size = os.path.getsize(src)
+    file_size = os.path.getsize(src) + 16
 
     q1, q2 = quota()
     if int(q1) + file_size > int(q2):
