@@ -13,10 +13,20 @@
 import cloud
 import humanize
 import readline
+import os
+import secrets
 
 f = open('account.txt', 'r').readlines()
-
 usr, pwd = [sub.replace('\n', '') for sub in f]
+
+key = ''
+
+if os.path.exists('key.txt'):
+    key = open('key.txt', 'r').readline().strip('\n')
+else:
+    key = secrets.token_urlsafe(16)
+    with open("key.txt", "w") as key_file:
+        key_file.write(key)
 
 def command(inp):
     global pwd
@@ -144,7 +154,7 @@ def command(inp):
         print(f"Error: Command '{req}' does not exist.")
 
 try:
-    cloud.init(usr, pwd)
+    cloud.init(usr, pwd, key)
 except Exception as e:
     print('Error: ' + str(e))
     quit()
