@@ -34,7 +34,7 @@ pip install -r requirements.txt
 python3 cloud_interface.py
 ````
 
-6. Back up your encryption password located in ```key.txt```. **If you lose your encryption password, you won't be able to access any of your files!**
+6. Back up your encryption key file ```key.key```. **If you lose your encryption key, you won't be able to access any of your files!**
 
 # Interface
 
