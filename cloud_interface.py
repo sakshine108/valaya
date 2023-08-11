@@ -14,19 +14,19 @@ import cloud
 import humanize
 import readline
 import os
-import secrets
 
 f = open('account.txt', 'r').readlines()
 usr, pwd = [sub.replace('\n', '') for sub in f]
 
 key = ''
 
-if os.path.exists('key.txt'):
-    key = open('key.txt', 'r').readline().strip('\n')
+if os.path.exists('key.key'):
+    with open("key.key", "rb") as f:
+        key = f.read()
 else:
-    key = secrets.token_urlsafe(16)
-    with open("key.txt", "w") as key_file:
-        key_file.write(key)
+    key = os.urandom(32)
+    with open("key.key", "wb") as f:
+        f.write(key)
 
 def command(inp):
     global pwd
