@@ -1,2 +1,2 @@
-email
+username
 password
