@@ -5,6 +5,9 @@ import os
 import threading
 from tqdm import tqdm
 from datetime import datetime
+import pyAesCrypt
+
+key = ''
 
 IP = '136.243.65.35'
 PORT = 4000
@@ -297,10 +300,15 @@ def download(src='', dst='', prog=True):
     if prog == True:
         pbar = tqdm(total=int(file_size / 1024 / 1024), desc=dst.split('/')[-1], unit='MB')
 
+    o = dst + '.aes'
+
     if os.path.exists(dst):
         os.remove(dst)
 
-    with open(dst, 'ab') as f:
+    if os.path.exists(o):
+        os.remove(o)
+
+    with open(o, 'ab') as f:
         while True:
             data = s.recv(1048576)
             f.write(data)
@@ -316,6 +324,15 @@ def download(src='', dst='', prog=True):
     if prog == True:
         pbar.close()
 
+        with open(o, "rb") as fIn:
+            try:
+                with open(dst, "wb") as fOut:
+                    pyAesCrypt.decryptStream(fIn, fOut, key, 1048576)
+            except ValueError:
+                remove(dst)
+
+        os.remove(o)
+
 def _send_bytes(s, src):
     with open(src, 'rb') as f:
         while True:
@@ -323,8 +340,10 @@ def _send_bytes(s, src):
 
             if not chunk:
                 break
-            
+
             s.send(chunk)
+
+    os.remove(src)
 
 upload_prog = 0
 
@@ -354,6 +373,14 @@ def upload(src='', dst='', prog=True):
     if not _is_valid_file_name(dst):
         raise Exception(f"'{dst}' is not a valid file name.")
         return
+
+    o = src + '.aes'
+
+    with open(src, "rb") as fIn:
+        with open(o, "wb") as fOut:
+            pyAesCrypt.encryptStream(fIn, fOut, key, 1048576)
+
+    src = o
 
     file_size = os.path.getsize(src)
 
@@ -438,11 +465,14 @@ def change_pwd(new_pwd=''):
         raise Exception('Password change failed.')
         return
 
-def init(usr_, pwd_):
+def init(usr_, pwd_, key_):
     global usr
     global pwd
+    global key
 
     usr = usr_
     pwd = hashlib.md5(bytes(pwd_, 'utf-8')).hexdigest()
+
+    key = key_
 
     list()
