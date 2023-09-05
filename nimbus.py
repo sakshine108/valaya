@@ -5,25 +5,55 @@ import os
 import threading
 from tqdm import tqdm
 from datetime import datetime
-
+import uuid
+import rsa
+from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-key = ''
+msg_key = Fernet.generate_key()
+fernet = Fernet(msg_key)
 
-IP = '136.243.65.35'
-PORT = 4000
+chunk_size = 1048576
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((IP, PORT))
-
+s = None
 f_list = []
 c_dir = ''
 usr = ''
 pwd = ''
+server_public_key = ''
+file_key = ''
 
-chunk_size = 1048576
+with open('server_public_key', 'rb') as key_file:
+    key_data = key_file.read()
+    server_public_key = rsa.PublicKey.load_pkcs1(key_data)
+
+def _send(cmd, args = None):
+    id = uuid.uuid4().hex
+
+    msg = {'id': id, 'acct': [usr, pwd], cmd: args}
+
+    msg = json.dumps(msg)
+    msg = bytes(msg + '\n', 'utf-8')
+
+    enc_msg = fernet.encrypt(msg)
+
+    s.send(enc_msg)
+
+def _recv():
+    res = s.recv(1024)
+
+    res = fernet.decrypt(res)
+
+    res = res.decode('utf-8')
+    res = json.loads(res)
+
+    if 'error' in res:
+        raise Exception(res['error'])
+        return
+
+    return res['res']
 
 def _is_valid_file_name(f):
     valid_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-!@#%^&*()_/.'
@@ -41,22 +71,11 @@ def _is_valid_file_name(f):
     return True
 
 def list(path='', stats=False):
-    d = {'username': usr, 'password': pwd, 'request': 'list', 'parameters': []}
-
-    d = json.dumps(d)
-    d = bytes(d + '\n', 'utf-8')
-    s.send(d)
-
-    res = s.recv(1024)
-    res = res.decode('utf-8')
-    res = json.loads(res)
-
-    if 'error' in res:
-        raise Exception(res['error'])
-        return
-
     global f_list
-    f_list = res['files']
+
+    _send('list')
+
+    f_list = _recv()
     f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
 
     f = c_dir + '/' + path
@@ -181,21 +200,9 @@ def move(src='', dst=''):
         raise Exception(f"Files '/{src}' and '/{dst}' are the same file.")
         return
 
-    d = {'username': usr, 'password': pwd, 'request': 'move', 'parameters': [src, dst]}
+    _send('move', [src, dst])
 
-    d = json.dumps(d)
-    d = bytes(d + '\n', 'utf-8')
-    s.send(d)
-
-    res = s.recv(1024)
-    res = res.decode('utf-8')
-    res = json.loads(res)
-
-    if 'error' in res.keys():
-        raise Exception(res['error'])
-        return
-
-    if res['success'] == False:
+    if _recv() == False:
         raise Exception('Move failed.')
         return
 
@@ -216,21 +223,9 @@ def remove(f=''):
             raise Exception(f"File '/{f}' does not exist.")
             return
 
-    d = {'username': usr, 'password': pwd, 'request': 'remove', 'parameters': [f]}
+    _send('remove', f)
 
-    d = json.dumps(d)
-    d = bytes(d + '\n', 'utf-8')
-    s.send(d)
-
-    res = s.recv(1024)
-    res = res.decode('utf-8')
-    res = json.loads(res)
-
-    if 'error' in res.keys():
-        raise Exception(res['error'])
-        return
-
-    if res['success'] == False:
+    if _recv() == False:
         raise Exception('Remove failed.')
         return
 
@@ -242,21 +237,9 @@ def quota():
     for i in range(len(f_list)):
         total_bytes += f_list[i][1]
 
-    d = {'username': usr, 'password': pwd, 'request': 'maxbytes', 'parameters': []}
+    _send('maxbytes')
 
-    d = json.dumps(d)
-    d = bytes(d + '\n', 'utf-8')
-    s.send(d)
-
-    res = s.recv(1024)
-    res = res.decode('utf-8')
-    res = json.loads(res)
-
-    if 'error' in res.keys():
-        raise Exception(res['error'])
-        return
-
-    max_bytes = res['maxbytes']
+    max_bytes = _recv()
 
     return (total_bytes, max_bytes)
 
@@ -276,6 +259,10 @@ def download(src='', dst='', prog=True):
     if dst == '':
         dst = os.getcwd() + '/' + src.split('/')[-1]
 
+    if len(f_list) == 0:
+        raise Exception(f"File '{src}' does not exist.")
+        return
+
     for i in range(len(f_list)):
         if f_list[i][0] == src:
             break
@@ -283,21 +270,10 @@ def download(src='', dst='', prog=True):
             raise Exception(f"File '{src}' does not exist.")
             return
 
-    d = {'username': usr, 'password': pwd, 'request': 'download', 'parameters': [src]}
+    _send('download', src)
 
-    d = json.dumps(d)
-    d = bytes(d + '\n', 'utf-8')
-    s.send(d)
-
-    res = s.recv(1024)
-    res = res.decode('utf-8')
-    res = json.loads(res)
-
-    if 'error' in res.keys():
-        raise Exception(res['error'])
-        return
-
-    file_size = res['filesize'] - 16
+    file_size = _recv()
+    file_size -= 16
     current_file_size = 0
 
     s.send(b'0')
@@ -310,7 +286,7 @@ def download(src='', dst='', prog=True):
 
     iv = s.recv(16)
 
-    cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+    cipher = Cipher(algorithms.AES(file_key), modes.GCM(iv), backend=default_backend())
     decryptor = cipher.decryptor()
 
     with open(dst, 'wb') as f:
@@ -334,7 +310,7 @@ def download(src='', dst='', prog=True):
 def _send_bytes(s, src):
     iv = os.urandom(16)
 
-    cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+    cipher = Cipher(algorithms.AES(file_key), modes.GCM(iv), backend=default_backend())
     encryptor = cipher.encryptor()
 
     s.send(iv)
@@ -349,12 +325,9 @@ def _send_bytes(s, src):
             encrypted_chunk = encryptor.update(chunk)
             s.send(encrypted_chunk)
 
-        encrypted_chunk = encryptor.finalize()
-        s.send(encrypted_chunk)
-
 upload_prog = 0
 
-def upload(src='', dst='', prog=True):
+def upload(src='', dst='', show_prog=True):
     global upload_prog
     upload_prog = 0
 
@@ -388,50 +361,35 @@ def upload(src='', dst='', prog=True):
         raise Exception('File is too large.')
         return
 
-    d = {'username': usr, 'password': pwd, 'request': 'upload', 'parameters': [dst, file_size]}
+    _send('upload', [dst, file_size])
 
-    d = json.dumps(d)
-    d = bytes(d + '\n', 'utf-8')
-    s.send(d)
-
-    res = s.recv(1024)
-    res = res.decode('utf-8')
-    res = json.loads(res)
-
-    if 'error' in res.keys():
-        raise Exception(res['error'])
-        return
+    s.recv(1)
 
     thread = threading.Thread(target=_send_bytes, args=(s, src))
     thread.start()
 
     buffer = ''
 
-    if prog == True:
+    if show_prog:
         pbar = tqdm(total=int(file_size / 1024 / 1024), desc=dst.split('/')[-1], unit='MB')
 
     while True:
-        data = s.recv(1024)
+        data = s.recv(20)
         data = data.decode('utf-8')
 
         buffer += data
 
         while buffer.find('\n') != -1:
             msg, buffer = buffer.split('\n', 1)
-            msg = json.loads(msg)
 
-            if msg['progress'] == True:
-                if prog == True:
+            prog = msg
+
+            if prog == 'done':
+                if show_prog:
                     pbar.close()
                 return
-            elif msg['progress'] == None:
-                if prog == True:
-                    pbar.close()
-                raise Exception('File is too large.')
-                return
-            elif prog == True:
-                p = msg['progress']
-
+            elif show_prog:
+                p = int(prog)
                 pbar.n = int(p / 1024 / 1024)
                 pbar.refresh()
                 
@@ -444,34 +402,27 @@ def change_pwd(new_pwd=''):
 
     new_pwd = hashlib.md5(bytes(new_pwd, 'utf-8')).hexdigest()
 
-    d = {'username': usr, 'password': pwd, 'request': 'changepwd', 'parameters': [new_pwd]}
+    _send('changepwd', new_pwd)
 
-    d = json.dumps(d)
-    d = bytes(d + '\n', 'utf-8')
-    s.send(d)
-
-    res = s.recv(1024)
-    res = res.decode('utf-8')
-    res = json.loads(res)
-
-    if 'error' in res.keys():
-        raise Exception(res['error'])
-        return
-
-    success = res['success']
-
-    if success == False:
+    if _recv() == False:
         raise Exception('Password change failed.')
         return
 
-def init(usr_, pwd_, key_):
+def init(ip, port, usr_, pwd_, file_key_):
+    global s
     global usr
     global pwd
-    global key
+    global file_key
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip, port))
 
     usr = usr_
     pwd = hashlib.md5(bytes(pwd_, 'utf-8')).hexdigest()
 
-    key = key_
+    file_key = file_key_
+
+    enc_msg_key = rsa.encrypt(msg_key, server_public_key)
+    s.send(enc_msg_key)
 
     list()
