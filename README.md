@@ -34,7 +34,7 @@ pip install -r requirements.txt
 python3 nimbus_cli.py
 ```
 
-1. Backup your `key` file.
+6. Backup your `key` file.
 
 > **Warning**
 > If you lose your file encryption key, you won't be able to access any of your uploaded files!
