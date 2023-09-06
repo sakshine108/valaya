@@ -1,21 +1,26 @@
-import nimbus
+import nimbus.nimbus as nimbus
 import humanize
 import readline
 import os
+import sys
 import pwinput
+import pkg_resources
 
-f = open('config', 'r').readlines()
+config_path = pkg_resources.resource_filename('nimbus', 'config.txt')
+
+f = open(config_path, 'r').readlines()
 usr, pwd, ip, port = [sub.replace('\n', '') for sub in f]
 port = int(port)
 
 key = ''
+key_path = pkg_resources.resource_filename('nimbus', 'key.txt')
 
-if os.path.exists('key'):
-    with open("key", "rb") as f:
+if os.path.exists(key_path):
+    with open(key_path, "rb") as f:
         key = f.read()
 else:
     key = os.urandom(32)
-    with open("key", "wb") as f:
+    with open(key_path, "wb") as f:
         f.write(key)
 
 def command(inp):
@@ -121,19 +126,19 @@ def command(inp):
             inp = pwinput.pwinput(prompt = "Current password: ")
 
             if inp == pwd:
-                n1 = pwinput.pwinput(prompt = "New password: ")
-                n2 = pwinput.pwinput(prompt = "Retype new password: ")
+                n1 = pwinput.pwinput(prompt = 'New password: ')
+                n2 = pwinput.pwinput(prompt = 'Retype new password: ')
 
                 if n1 == n2:
                     nimbus.change_pwd(n1)
                     nimbus.init(ip, port, usr, n1, key)
 
-                    with open('config', 'r') as f:
+                    with open(config_path, 'r') as f:
                         lines = f.readlines()
                     
                     lines[1] = f'{n1}\n'
                     
-                    with open('config', 'w') as f:
+                    with open(config_path, 'w') as f:
                         f.writelines(lines)
 
                     pwd = n1
@@ -150,12 +155,26 @@ def command(inp):
     else:
         print(f"Error: Command '{cmd}' does not exist.")
 
+if len(sys.argv) >= 3:
+    usr = sys.argv[1]
+    pwd = sys.argv[2]
+    
+    with open(config_path, 'r') as f:
+        lines = f.readlines()
+    
+    lines[0] = f'{usr}\n'
+    lines[1] = f'{pwd}\n'
+    
+    with open(config_path, 'w') as f:
+        f.writelines(lines)
+
 try:
     nimbus.init(ip, port, usr, pwd, key)
 except Exception as e:
     print('Error: ' + str(e))
     quit()
 
-while True:
-    inp = input(f'{usr} {nimbus.current_dir()} ❯ ')
-    command(inp)
+def main():
+    while True:
+        inp = input(f'{usr} {nimbus.current_dir()} ❯ ')
+        command(inp)

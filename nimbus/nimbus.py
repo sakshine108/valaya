@@ -11,6 +11,7 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+import pkg_resources
 
 msg_key = Fernet.generate_key()
 fernet = Fernet(msg_key)
@@ -25,7 +26,7 @@ pwd = ''
 server_public_key = ''
 file_key = ''
 
-with open('server_public_key', 'rb') as key_file:
+with open(pkg_resources.resource_filename('nimbus', 'server_public_key.txt'), 'rb') as key_file:
     key_data = key_file.read()
     server_public_key = rsa.PublicKey.load_pkcs1(key_data)
 

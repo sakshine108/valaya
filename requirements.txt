@@ -1,5 +1,6 @@
-cryptography==41.0.3
-humanize==4.8.0
+cryptography==39.0.2
+humanize==4.4.0
 pwinput==1.0.3
 rsa==4.9
-tqdm==4.66.1
+setuptools==66.1.1
+tqdm==4.64.1

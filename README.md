@@ -6,38 +6,21 @@ Nimbus is a cloud storage system aimed to be low cost, secure, and customizable.
 
 ## Create an Account
 
-To create an account for testing, email us at [sakshine108@gmail.com](mailto:sakshine108@gmail.com). We will make you an account and reply with the account details.
+To create an account for testing, [email](mailto:sakshine108@gmail.com) us. We will make you an account and reply with the account details.
 
 ## Install and Run
 
-Make sure you have **python** and **git** installed and up to date.
-
-1. Clone this repository:
+You can install Nimbus with pip:
 ```
-git clone https://github.com/sakshine108/nimbus.git
+pip install nimbus-cloud
 ```
 
-2. Change your directory into the cloud folder:
+Run the interface with your account details:
 ```
-cd nimbus
-```
-
-3. Install the requirements:
-```
-pip install -r requirements.txt
+nimbus [username] [password]
 ```
 
-4. Open the `config` file and replace the first and second line with your account username and password.
-
-5. Run the interface:
-```
-python3 nimbus_cli.py
-```
-
-6. Backup your `key` file.
-
-> **Warning**
-> If you lose your file encryption key, you won't be able to access any of your uploaded files!
+Next time you run the interface, you won't need to specify your account details since it automatically saves them.
 
 # Interface
 
