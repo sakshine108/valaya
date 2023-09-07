@@ -71,6 +71,23 @@ def _is_valid_file_name(f):
 
     return True
 
+def list_all(stats=False):
+    global f_list
+
+    _send('list')
+
+    f_list = _recv()
+    f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
+
+    files = []
+
+    if not stats:
+        for f in f_list:
+            files.append(f[0])
+    else: files = f_list
+
+    return files
+
 def list(path='', stats=False):
     global f_list
 
@@ -409,21 +426,52 @@ def change_pwd(new_pwd=''):
         raise Exception('Password change failed.')
         return
 
-def init(ip, port, usr_, pwd_, file_key_):
+def init(ip=None, port=None, user=None, passwd=None, file_key_=None):
     global s
     global usr
     global pwd
     global file_key
+    global f_list
+
+    config_path = pkg_resources.resource_filename('nimbus', 'config.txt')
+
+    f = open(config_path, 'r').readlines()
+    usr_c, pwd_c, ip_c, port_c = [sub.replace('\n', '') for sub in f]
+    port_c = int(port_c)
+
+    if ip == None:
+        ip = ip_c
+    if port == None:
+        port = port_c
+    if user == None:
+        user = usr_c
+    if passwd == None:
+        passwd = pwd_c
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((ip, port))
 
-    usr = usr_
-    pwd = hashlib.md5(bytes(pwd_, 'utf-8')).hexdigest()
+    usr = user
+    pwd = hashlib.md5(bytes(passwd, 'utf-8')).hexdigest()
+
+    if file_key_ == None:
+        key_path = pkg_resources.resource_filename('nimbus', 'key.txt')
+
+        if os.path.exists(key_path):
+            with open(key_path, "rb") as f:
+                file_key_ = f.read()
+        else:
+            file_key_ = os.urandom(32)
+            with open(key_path, "wb") as f:
+                f.write(file_key_)
 
     file_key = file_key_
 
     enc_msg_key = rsa.encrypt(msg_key, server_public_key)
     s.send(enc_msg_key)
 
-    list()
+    _send('list')
+
+    f_list = _recv()
+    f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
+    

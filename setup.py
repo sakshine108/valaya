@@ -22,7 +22,7 @@ setup(
     name="nimbus-cloud",
     version=read("nimbus", "VERSION"),
     description="A secure and customizable cloud storage system.",
-    url="https://github.com/sakshine108/nimbus",
+    url="https://github.com/sakshine108/nimbus/",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     author="sakshine108",
