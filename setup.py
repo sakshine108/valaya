@@ -30,6 +30,6 @@ setup(
     package_data={"nimbus": ["config.txt", "server_public_key.txt"]},
     install_requires=read_requirements("requirements.txt"),
     entry_points={
-        "console_scripts": ["nimbus = nimbus.__main__:main"]
+        "console_scripts": ["nimbus = nimbus.nimbus_cli:main"]
     },
 )

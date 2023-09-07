@@ -1,4 +1,4 @@
-import nimbus.nimbus as nimbus
+import nimbus
 import humanize
 import readline
 import os
