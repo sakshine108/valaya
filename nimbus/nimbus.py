@@ -224,24 +224,24 @@ def move(src='', dst=''):
         raise Exception('Move failed.')
         return
 
-def remove(f=''):
-    if f == '':
+def remove(file_path=''):
+    if file_path == '':
         raise Exception('Missing operand.')
         return
 
-    if not f.startswith('/'):
-        f = c_dir + '/' + f
+    if not file_path.startswith('/'):
+        file_path = c_dir + '/' + file_path
 
-    f = f.removeprefix('/')
+    file_path = file_path.removeprefix('/')
 
     for i in range(len(f_list)):
-        if f_list[i][0] == f:
+        if f_list[i][0] == file_path:
             break
         if i + 1 == len(f_list):
-            raise Exception(f"File '/{f}' does not exist.")
+            raise Exception(f"File '/{file_path}' does not exist.")
             return
 
-    _send('remove', f)
+    _send('remove', file_path)
 
     if _recv() == False:
         raise Exception('Remove failed.')
@@ -426,7 +426,7 @@ def change_pwd(new_pwd=''):
         raise Exception('Password change failed.')
         return
 
-def init(ip=None, port=None, user=None, passwd=None, file_key_=None):
+def init(user=None, passwd=None, key_path=None):
     global s
     global usr
     global pwd
@@ -436,17 +436,43 @@ def init(ip=None, port=None, user=None, passwd=None, file_key_=None):
     config_path = pkg_resources.resource_filename('nimbus', 'config.txt')
 
     f = open(config_path, 'r').readlines()
-    usr_c, pwd_c, ip_c, port_c = [sub.replace('\n', '') for sub in f]
-    port_c = int(port_c)
+    usr_c, pwd_c, ip, port, key_path_c = [sub.replace('\n', '') for sub in f]
+    port = int(port)
 
-    if ip == None:
-        ip = ip_c
-    if port == None:
-        port = port_c
+    if user != None or passwd != None or key_path != None:
+        with open(config_path, 'r') as f:
+            lines = f.readlines()
+        
+            if user != None:
+                lines[0] = f'{user}\n'
+
+            if passwd != None:
+                lines[1] = f'{passwd}\n'
+
+            if key_path != None:
+                lines[4] = f'{key_path}\n'
+            
+            with open(config_path, 'w') as f:
+                f.writelines(lines)
+
     if user == None:
         user = usr_c
+
     if passwd == None:
         passwd = pwd_c
+
+    if key_path == None:
+        key_path = key_path_c
+
+    key = None
+
+    if os.path.exists(key_path):
+        with open(key_path, "rb") as f:
+            key = f.read()
+    else:
+        key = os.urandom(32)
+        with open(key_path, "wb") as f:
+            f.write(key)
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((ip, port))
@@ -454,18 +480,7 @@ def init(ip=None, port=None, user=None, passwd=None, file_key_=None):
     usr = user
     pwd = hashlib.md5(bytes(passwd, 'utf-8')).hexdigest()
 
-    if file_key_ == None:
-        key_path = pkg_resources.resource_filename('nimbus', 'key.txt')
-
-        if os.path.exists(key_path):
-            with open(key_path, "rb") as f:
-                file_key_ = f.read()
-        else:
-            file_key_ = os.urandom(32)
-            with open(key_path, "wb") as f:
-                f.write(file_key_)
-
-    file_key = file_key_
+    file_key = key
 
     enc_msg_key = rsa.encrypt(msg_key, server_public_key)
     s.send(enc_msg_key)

@@ -1,4 +1,4 @@
-import nimbus
+import nimbus as nimbus
 import humanize
 import readline
 import os
@@ -8,20 +8,8 @@ import pkg_resources
 
 config_path = pkg_resources.resource_filename('nimbus', 'config.txt')
 
-f = open(config_path, 'r').readlines()
-usr, pwd, ip, port = [sub.replace('\n', '') for sub in f]
-port = int(port)
-
-key = ''
-key_path = pkg_resources.resource_filename('nimbus', 'key.txt')
-
-if os.path.exists(key_path):
-    with open(key_path, "rb") as f:
-        key = f.read()
-else:
-    key = os.urandom(32)
-    with open(key_path, "wb") as f:
-        f.write(key)
+usr = ''
+pwd = ''
 
 def command(inp):
     global pwd
@@ -155,24 +143,20 @@ def command(inp):
     else:
         print(f"Error: Command '{cmd}' does not exist.")
 
-if len(sys.argv) >= 3:
+if len(sys.argv) >= 4:
     usr = sys.argv[1]
     pwd = sys.argv[2]
+    key_path = sys.argv[3]
     
+    nimbus.init(user=usr, passwd=pwd, key_path=key_path)
+else:
+    nimbus.init()
+
     with open(config_path, 'r') as f:
         lines = f.readlines()
-    
-    lines[0] = f'{usr}\n'
-    lines[1] = f'{pwd}\n'
-    
-    with open(config_path, 'w') as f:
-        f.writelines(lines)
 
-try:
-    nimbus.init(ip, port, usr, pwd, key)
-except Exception as e:
-    print('Error: ' + str(e))
-    quit()
+        usr = lines[0].replace('\n', '')
+        pwd = lines[1].replace('\n', '')
 
 def main():
     while True:
