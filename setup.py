@@ -27,7 +27,7 @@ setup(
     long_description_content_type="text/markdown",
     author="sakshine108",
     packages=find_packages(),
-    package_data={"nimbus": ["config.txt", "server_public_key.txt"]},
+    package_data={"nimbus": ["config.yaml", "server_public_key.txt"]},
     install_requires=read_requirements("requirements.txt"),
     entry_points={
         "console_scripts": ["nimbus = nimbus.nimbus_cli:main"]
