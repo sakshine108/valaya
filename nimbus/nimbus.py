@@ -12,6 +12,8 @@ from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import pkg_resources
+import yaml
+from yaml.loader import SafeLoader
 
 msg_key = Fernet.generate_key()
 fernet = Fernet(msg_key)
@@ -433,27 +435,29 @@ def init(user=None, passwd=None, key_path=None):
     global file_key
     global f_list
 
-    config_path = pkg_resources.resource_filename('nimbus', 'config.txt')
+    config_path = pkg_resources.resource_filename('nimbus', 'config.yaml')
 
-    f = open(config_path, 'r').readlines()
-    usr_c, pwd_c, ip, port, key_path_c = [sub.replace('\n', '') for sub in f]
-    port = int(port)
+    with open(config_path) as f:
+        config = yaml.load(f, Loader=SafeLoader)
+
+    usr_c = config['username']
+    pwd_c = config['password']
+    ip = config['ip']
+    port = config['port']
+    key_path_c = config['key_path']
 
     if user != None or passwd != None or key_path != None:
-        with open(config_path, 'r') as f:
-            lines = f.readlines()
-        
-            if user != None:
-                lines[0] = f'{user}\n'
+        if user != None:
+            config['username'] = user
 
-            if passwd != None:
-                lines[1] = f'{passwd}\n'
+        if passwd != None:
+            config['password'] = passwd
 
-            if key_path != None:
-                lines[4] = f'{key_path}\n'
-            
-            with open(config_path, 'w') as f:
-                f.writelines(lines)
+        if key_path != None:
+            config['key_path'] = key_path
+
+        with open(config_path, 'w') as f:
+            yaml.dump(config, f, sort_keys=False)
 
     if user == None:
         user = usr_c
@@ -489,4 +493,3 @@ def init(user=None, passwd=None, key_path=None):
 
     f_list = _recv()
     f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
-    

@@ -1,12 +1,14 @@
-import nimbus as nimbus
+import nimbus
 import humanize
 import readline
 import os
 import sys
 import pwinput
 import pkg_resources
+import yaml
+from yaml.loader import SafeLoader
 
-config_path = pkg_resources.resource_filename('nimbus', 'config.txt')
+config_path = pkg_resources.resource_filename('nimbus', 'config.yaml')
 
 usr = ''
 pwd = ''
@@ -118,18 +120,9 @@ def command(inp):
                 n2 = pwinput.pwinput(prompt = 'Retype new password: ')
 
                 if n1 == n2:
-                    nimbus.change_pwd(n1)
-                    nimbus.init(ip, port, usr, n1, key)
-
-                    with open(config_path, 'r') as f:
-                        lines = f.readlines()
-                    
-                    lines[1] = f'{n1}\n'
-                    
-                    with open(config_path, 'w') as f:
-                        f.writelines(lines)
-
                     pwd = n1
+                    nimbus.change_pwd(pwd)
+                    nimbus.init(passwd=pwd)
 
                     print(f"Password changed to '{'*' * len(n1)}'.")
                 else:
@@ -152,11 +145,11 @@ if len(sys.argv) >= 4:
 else:
     nimbus.init()
 
-    with open(config_path, 'r') as f:
-        lines = f.readlines()
+    with open(config_path) as f:
+        config = yaml.load(f, Loader=SafeLoader)
 
-        usr = lines[0].replace('\n', '')
-        pwd = lines[1].replace('\n', '')
+    usr = config['username']
+    pwd = config['password']
 
 def main():
     while True:

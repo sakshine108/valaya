@@ -20,7 +20,9 @@ Run the interface with your account details:
 nimbus [username] [password] [file path for encryption key e.g. /home/nimbus/key.txt]
 ```
 
-After running this, the interface will run. It will also create an encryption key file with the file path you specified. **Make sure to backup your encryption key!** Next time you run the interface, you won't need to specify any parameters since it automatically saves them.
+This command will bring up the interface. It will also create an encryption key file with the file path you specified. **Make sure to backup your encryption key!**
+
+Next time you run the interface, there is no need to specify any parameters since they are automatically saved. The parameters you set are saved in the `config.yaml` file located in the package directory.
 
 # Interface
 
@@ -48,7 +50,7 @@ This system comes with a command line interface.
 
 ### Encryption
 
-Files uploaded to our servers are encrypted with AES using a 32 byte encryption key. Only you can decrypt your files. **Keep in mind that if you lose your encryption key you will not be able to access your files, so make a backup.**
+Files uploaded to our servers are encrypted with 256 bit AES encryption. Only you can decrypt your files. **Keep in mind that if you lose your encryption key you will not be able to access your files, so make a backup.**
 
 # Documentation
 
