@@ -422,11 +422,17 @@ def change_pwd(new_pwd=''):
 
     new_pwd = hashlib.md5(bytes(new_pwd, 'utf-8')).hexdigest()
 
-    _send('changepwd', new_pwd)
+    _send('change_pwd', new_pwd)
 
     if _recv() == False:
         raise Exception('Password change failed.')
         return
+    
+def create_account(usr, pwd):
+    pwd = hashlib.md5(bytes(pwd, 'utf-8')).hexdigest()
+
+    _send('create_account', [usr, pwd])
+    _recv()
 
 def init(user=None, passwd=None, key_path=None):
     global s
@@ -443,7 +449,7 @@ def init(user=None, passwd=None, key_path=None):
     usr_c = config['username']
     pwd_c = config['password']
     ip = config['ip']
-    port = config['port']
+    port = config['port']   
     key_path_c = config['key_path']
 
     if user != None or passwd != None or key_path != None:
@@ -489,7 +495,8 @@ def init(user=None, passwd=None, key_path=None):
     enc_msg_key = rsa.encrypt(msg_key, server_public_key)
     s.send(enc_msg_key)
 
-    _send('list')
+    if usr != '':
+        _send('list')
 
-    f_list = _recv()
-    f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
+        f_list = _recv()
+        f_list = sorted(f_list, key=lambda x: x[2], reverse=True)

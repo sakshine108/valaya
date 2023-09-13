@@ -2,27 +2,29 @@
 
 Nimbus is a low cost, secure, and customizable cloud storage system. Currently, we are giving access to 100 GB of cloud storage free of charge for testing purposes.
 
-# Installation
+# Install and Run
 
-### Create an Account
-
-To create an account for testing, [email](mailto:sakshine108@gmail.com) us. We will make you an account and reply with the account details.
-
-### Install and Run
-
-You can install Nimbus with pip:
+1. You can install Nimbus with pip:
 ```
 pip install nimbus-cloud
 ```
 
-Run the interface with your account details:
+1. Create an account:
 ```
-nimbus [username] [password] [file path for encryption key e.g. /home/nimbus/key.txt]
+nimbus signup
 ```
 
-This command will bring up the interface. It will also create an encryption key file with the file path you specified. **Make sure to backup your encryption key!**
+This command will ask you for a username, password, and encryption key filepath (e.g. /home/nimbus/key.txt), and create you an account. It will save your account details and encryption key filepath to the `config.yaml` file located in the package directory. It will create an encryption key file with the filepath you specified. If an existing encryption key file already exists with the same filepath, it will not be overwritten. **Make sure to backup your encryption key!**
 
-Next time you run the interface, there is no need to specify any parameters since they are automatically saved. The parameters you set are saved in the `config.yaml` file located in the package directory.
+Sign in to Nimbus:
+```
+nimbus signin
+```
+
+3. Run the interface:
+```
+nimbus
+```
 
 # Interface
 

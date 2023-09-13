@@ -10,8 +10,11 @@ from yaml.loader import SafeLoader
 
 config_path = pkg_resources.resource_filename('nimbus', 'config.yaml')
 
-usr = ''
-pwd = ''
+with open(config_path) as f:
+    config = yaml.load(f, Loader=SafeLoader)
+
+usr = config['username']
+pwd = config['password']
 
 def command(inp):
     global pwd
@@ -136,20 +139,49 @@ def command(inp):
     else:
         print(f"Error: Command '{cmd}' does not exist.")
 
-if len(sys.argv) >= 4:
-    usr = sys.argv[1]
-    pwd = sys.argv[2]
-    key_path = sys.argv[3]
+def sign_in():
+    usr = input('Username: ')
+    pwd = pwinput.pwinput(prompt = 'Password: ')
+    key_path = input('Encryption key filepath: ')
+
+    try:
+        nimbus.init(usr, pwd, key_path)
+    except Exception as e:
+        print('Error: ' + str(e))
+
+    quit()
+
+def sign_up():
+    user = input('Username: ')
+    passwd = pwinput.pwinput(prompt = 'Password: ')
+    passwd2 = pwinput.pwinput(prompt = 'Retype password: ')
+
+    if passwd != passwd2:
+        print('Passwords do not match.')
+        quit()
     
-    nimbus.init(user=usr, passwd=pwd, key_path=key_path)
-else:
+    key_path = input('Encryption key filepath: ')
+
+    try:
+        nimbus.init(usr, pwd)
+        nimbus.create_account(user, passwd)
+        nimbus.init(user, passwd, key_path)
+    except Exception as e:
+        print('Error: ' + str(e))
+
+    quit()
+
+if len(sys.argv) == 2:
+    if sys.argv[1] == 'signin':
+        sign_in()
+    elif sys.argv[1] == 'signup':
+        sign_up()
+
+try:
     nimbus.init()
-
-    with open(config_path) as f:
-        config = yaml.load(f, Loader=SafeLoader)
-
-    usr = config['username']
-    pwd = config['password']
+except Exception as e:
+    print('Error: ' + str(e))
+    quit()
 
 def main():
     while True:
