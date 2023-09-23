@@ -1,6 +1,7 @@
 cryptography==39.0.2
 humanize==4.4.0
 pwinput==1.0.3
+PyYAML==6.0.1
 rsa==4.9
 setuptools==66.1.1
 tqdm==4.64.1

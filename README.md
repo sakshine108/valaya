@@ -1,6 +1,6 @@
 # Nimbus
 
-Nimbus is a low cost, secure, and customizable cloud storage system. Currently, we are giving access to 100 GB of cloud storage free of charge for testing purposes.
+Nimbus is a low cost, secure, and customizable cloud storage system. Currently, we are giving free access to 20 GB of cloud storage for testing purposes.
 
 # Install and Run
 
@@ -9,12 +9,12 @@ Nimbus is a low cost, secure, and customizable cloud storage system. Currently, 
 pip install nimbus-cloud
 ```
 
-1. Create an account:
+2. Create an account:
 ```
 nimbus signup
 ```
 
-This command will ask you for a username, password, and encryption key filepath (e.g. /home/nimbus/key.txt), and create you an account. It will save your account details and encryption key filepath to the `config.yaml` file located in the package directory. It will create an encryption key file with the filepath you specified. If an existing encryption key file already exists with the same filepath, it will not be overwritten. **Make sure to backup your encryption key!**
+This command will ask you for an email, password, and encryption key filepath (e.g. /home/nimbus/key.txt), and create you an account. It will save your account details and encryption key filepath to the `config.yaml` file located in the package directory. It will create an encryption key file with the filepath you specified. If an existing encryption key file already exists with the same filepath, it will not be overwritten. **Make sure to backup your encryption key!**
 
 Sign in to Nimbus:
 ```
@@ -135,8 +135,8 @@ Changes your Nimbus account password to `new_pwd`.
 
 # More Info
 
-* There is a maximum quota of 100 GB
-* You can only upload and download a total of 100 GB per day
+* There is a maximum quota of 20 GB
+* You can only upload and download a total of 20 GB per day
 
 # Feedback
 

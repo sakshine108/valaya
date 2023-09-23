@@ -152,7 +152,7 @@ def sign_in():
     quit()
 
 def sign_up():
-    user = input('Username: ')
+    user = input('Email: ')
     passwd = pwinput.pwinput(prompt = 'Password: ')
     passwd2 = pwinput.pwinput(prompt = 'Retype password: ')
 
@@ -163,9 +163,15 @@ def sign_up():
     key_path = input('Encryption key filepath: ')
 
     try:
-        nimbus.init(usr, pwd)
+        nimbus.init(user='')
         nimbus.create_account(user, passwd)
+
+        code = input('Verification code: ')
+
+        nimbus.verify(code)
         nimbus.init(user, passwd, key_path)
+
+        print('Account created.')
     except Exception as e:
         print('Error: ' + str(e))
 

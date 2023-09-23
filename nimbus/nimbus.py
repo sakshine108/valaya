@@ -54,7 +54,6 @@ def _recv():
 
     if 'error' in res:
         raise Exception(res['error'])
-        return
 
     return res['res']
 
@@ -72,6 +71,30 @@ def _is_valid_file_name(f):
             return False
 
     return True
+
+def _is_valid_passwd(passwd):
+    l, u, s, d = 0, 0, 0, 0
+
+    uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    lowercase = "abcdefghijklmnopqrstuvwxyz"
+    symbols = '~`!@#$%^&*()_-+={[}]|\:;"<,>.?/'
+    digits = '0123456789'
+
+    if (len(passwd) >= 8):
+        for i in passwd:
+            if (i in lowercase):
+                l+=1           
+            if (i in uppercase):
+                u+=1           
+            if (i in digits):
+                d+=1           
+            if(i in symbols):
+                s+=1    
+
+    if (l>=1 and u>=1 and s>=1 and d>=1 and l+s+u+d==len(passwd)):
+        return True
+    else:
+        return False
 
 def list_all(stats=False):
     global f_list
@@ -146,7 +169,6 @@ def list(path='', stats=False):
 
     if exists == False:
         raise Exception(f"File or directory '/{f}' does not exist.")
-        return
 
     return files
 
@@ -173,8 +195,7 @@ def change_dir(path=''):
                 return
 
         raise Exception(f"Directory '/{new_dir}' does not exist.")
-        return
-
+    
 def back():
     global c_dir
 
@@ -182,17 +203,15 @@ def back():
 
     if c_dir == a:
         raise Exception('Cannot go back any furthur.')
-        return
-        
+
     c_dir = a
 
 def move(src='', dst=''):
     if src == '':
         raise Exception('Missing source.')
-        return
+
     elif dst == '':
         raise Exception('Missing destination.')
-        return
 
     if not src.startswith('/'):
         src = c_dir + '/' + src
@@ -210,26 +229,21 @@ def move(src='', dst=''):
             break
         if i + 1 == len(f_list):
             raise Exception(f"File '/{src}' does not exist.")
-            return
 
     if not _is_valid_file_name(dst):
         raise Exception(f"'/{dst}' is not a valid file name.")
-        return
 
     if src == dst:
         raise Exception(f"Files '/{src}' and '/{dst}' are the same file.")
-        return
 
     _send('move', [src, dst])
 
     if _recv() == False:
         raise Exception('Move failed.')
-        return
 
 def remove(file_path=''):
     if file_path == '':
         raise Exception('Missing operand.')
-        return
 
     if not file_path.startswith('/'):
         file_path = c_dir + '/' + file_path
@@ -241,13 +255,11 @@ def remove(file_path=''):
             break
         if i + 1 == len(f_list):
             raise Exception(f"File '/{file_path}' does not exist.")
-            return
 
     _send('remove', file_path)
 
     if _recv() == False:
         raise Exception('Remove failed.')
-        return
 
 def quota():
     list()
@@ -266,7 +278,6 @@ def quota():
 def download(src='', dst='', prog=True):
     if src == '':
         raise Exception('Missing source.')
-        return
 
     if not src.startswith('/'):
         src = c_dir + '/' + src
@@ -281,14 +292,12 @@ def download(src='', dst='', prog=True):
 
     if len(f_list) == 0:
         raise Exception(f"File '{src}' does not exist.")
-        return
 
     for i in range(len(f_list)):
         if f_list[i][0] == src:
             break
         if i + 1 == len(f_list):
             raise Exception(f"File '{src}' does not exist.")
-            return
 
     _send('download', src)
 
@@ -353,11 +362,9 @@ def upload(src='', dst='', show_prog=True):
 
     if src == '':
         raise Exception('Missing source.')
-        return
 
     if not os.path.exists(src):
         raise Exception(f"File '{src}' does not exist.")
-        return
 
     if not dst.startswith('/'):
         dst = c_dir + '/' + dst
@@ -372,14 +379,12 @@ def upload(src='', dst='', show_prog=True):
 
     if not _is_valid_file_name(dst):
         raise Exception(f"'{dst}' is not a valid file name.")
-        return
 
     file_size = os.path.getsize(src) + 16
 
     q1, q2 = quota()
     if int(q1) + file_size > int(q2):
         raise Exception('File is too large.')
-        return
 
     _send('upload', [dst, file_size])
 
@@ -418,7 +423,8 @@ def upload(src='', dst='', show_prog=True):
 def change_pwd(new_pwd=''):
     if new_pwd == '':
         raise Exception('Missing operand.')
-        return
+    elif not _is_valid_passwd(new_pwd):
+        raise Exception('Invalid password.')
 
     new_pwd = hashlib.md5(bytes(new_pwd, 'utf-8')).hexdigest()
 
@@ -426,12 +432,18 @@ def change_pwd(new_pwd=''):
 
     if _recv() == False:
         raise Exception('Password change failed.')
-        return
-    
+
 def create_account(usr, pwd):
+    if not _is_valid_passwd(pwd):
+        raise Exception('Invalid password.')
+
     pwd = hashlib.md5(bytes(pwd, 'utf-8')).hexdigest()
 
     _send('create_account', [usr, pwd])
+    _recv()
+
+def verify(code):
+    _send('verify', code)
     _recv()
 
 def init(user=None, passwd=None, key_path=None):
@@ -451,6 +463,15 @@ def init(user=None, passwd=None, key_path=None):
     ip = config['ip']
     port = config['port']   
     key_path_c = config['key_path']
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip, port))
+
+    enc_msg_key = rsa.encrypt(msg_key, server_public_key)
+    s.send(enc_msg_key)
+
+    if user == '':
+        return
 
     if user != None or passwd != None or key_path != None:
         if user != None:
@@ -476,27 +497,21 @@ def init(user=None, passwd=None, key_path=None):
 
     key = None
 
-    if os.path.exists(key_path):
-        with open(key_path, "rb") as f:
-            key = f.read()
-    else:
-        key = os.urandom(32)
-        with open(key_path, "wb") as f:
-            f.write(key)
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((ip, port))
+    if key_path != None:
+        if os.path.exists(key_path):
+            with open(key_path, "rb") as f:
+                key = f.read()
+        else:
+            key = os.urandom(32)
+            with open(key_path, "wb") as f:
+                f.write(key)
 
     usr = user
     pwd = hashlib.md5(bytes(passwd, 'utf-8')).hexdigest()
 
     file_key = key
 
-    enc_msg_key = rsa.encrypt(msg_key, server_public_key)
-    s.send(enc_msg_key)
+    _send('list')
 
-    if usr != '':
-        _send('list')
-
-        f_list = _recv()
-        f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
+    f_list = _recv()
+    f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
