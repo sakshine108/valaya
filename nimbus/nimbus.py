@@ -175,10 +175,10 @@ def list(path='', stats=False):
 def current_dir():
     return '/' + c_dir
 
-def change_dir(path=''):
+def change_dir(path):
     global c_dir
 
-    if path == '':
+    if path == '' or path == '/':
         c_dir = ''
         return
     else:
@@ -206,13 +206,7 @@ def back():
 
     c_dir = a
 
-def move(src='', dst=''):
-    if src == '':
-        raise Exception('Missing source.')
-
-    elif dst == '':
-        raise Exception('Missing destination.')
-
+def move(src, dst):
     if not src.startswith('/'):
         src = c_dir + '/' + src
     if not dst.startswith('/'):
@@ -241,10 +235,7 @@ def move(src='', dst=''):
     if _recv() == False:
         raise Exception('Move failed.')
 
-def remove(file_path=''):
-    if file_path == '':
-        raise Exception('Missing operand.')
-
+def remove(file_path):
     if not file_path.startswith('/'):
         file_path = c_dir + '/' + file_path
 
@@ -275,20 +266,17 @@ def quota():
 
     return (total_bytes, max_bytes)
 
-def download(src='', dst='', prog=True):
-    if src == '':
-        raise Exception('Missing source.')
-
+def download(src, dst=None, prog=True):
     if not src.startswith('/'):
         src = c_dir + '/' + src
 
     src = src.removeprefix('/')
 
-    if dst.endswith('/'):
-        dst += src.split('/')[-1]
-
-    if dst == '':
+    if dst == None:
         dst = os.getcwd() + '/' + src.split('/')[-1]
+    else:
+        if dst.endswith('/'):
+            dst += src.split('/')[-1]
 
     if len(f_list) == 0:
         raise Exception(f"File '{src}' does not exist.")
@@ -356,24 +344,21 @@ def _send_bytes(s, src):
 
 upload_prog = 0
 
-def upload(src='', dst='', show_prog=True):
+def upload(src, dst=None, show_prog=True):
     global upload_prog
     upload_prog = 0
-
-    if src == '':
-        raise Exception('Missing source.')
 
     if not os.path.exists(src):
         raise Exception(f"File '{src}' does not exist.")
 
-    if not dst.startswith('/'):
-        dst = c_dir + '/' + dst
-
-    if dst.endswith('/'):
-        dst += src.split('/')[-1]
-
-    if dst == '':
+    if dst == None:
         dst = c_dir + '/' + src.split('/')[-1]
+    else:
+        if not dst.startswith('/'):
+            dst = c_dir + '/' + dst
+
+        if dst.endswith('/'):
+            dst += src.split('/')[-1]
 
     dst = dst.removeprefix('/')
 
@@ -420,10 +405,8 @@ def upload(src='', dst='', show_prog=True):
                 
                 upload_prog = p
 
-def change_pwd(new_pwd=''):
-    if new_pwd == '':
-        raise Exception('Missing operand.')
-    elif not _is_valid_passwd(new_pwd):
+def change_pwd(new_pwd):
+    if not _is_valid_passwd(new_pwd):
         raise Exception('Invalid password.')
 
     new_pwd = hashlib.md5(bytes(new_pwd, 'utf-8')).hexdigest()

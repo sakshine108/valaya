@@ -37,14 +37,12 @@ This system comes with a command line interface.
 | `b`                                             | Changes to the previous directory.                                                                                                            |
 | `cd [directory]`                                | Changes to a different directory.                                                                                                             |
 | `dl [source file path] [destination file path]` | Downloads a file. The source is the file path on the cloud and the destination is the file path on the local filesystem once its downloaded.  |
-| `ls [directory]`                                | Lists files in a directory.                                                                                                                   |
-| `ls -l [directory]`                             | Lists files in a directory along with details (file size and upload date).                                                                    |
+| `ls [-l] [directory]`                           | Lists files in a directory. If `-l` is set, it will also show the file details.                                                               |
 | `mv [old file path] [new file path]`            | Moves or renames a file. The source is the file path on the cloud of the file you want to move and the destination is the modified file path. |
 | `passwd`                                        | Changes the password.                                                                                                                         |
 | `pwd`                                           | Shows the current directory.                                                                                                                  |
 | `q`                                             | Quits the interface.                                                                                                                          |
-| `quota`                                         | Shows how much storage is left.                                                                                                               |
-| `quota -l`                                      | Shows how much storage is left in bytes.                                                                                                      |
+| `quota [-l]`                                    | Shows how much storage is left. If `-l` is set, it will show in bytes.                                                                        |
 | `rm [file path]`                                | Removes a file.                                                                                                                               |
 | `ul [source file path] [destination file path]` | Uploads a file. The source is the file path on the local filesystem and the destination is the file path on the cloud once its uploaded.      |
 
@@ -89,7 +87,7 @@ for file in files:
 
 If a function takes in a path, it can be both absolute and relative.
 
-#### `nimbus.init(user, passwd, key_path)`
+#### `nimbus.init(user=None, passwd=None, key_path=None)`
 Initializes the module. Sets all of the required variables. **This function needs to be called before calling any other function.** If you do not set a parameter, it will be automatically set based on what is in the configuration file. Every time you set a parameter, it will be saved in the configuration file.
 
 * `user` (str): Your Nimbus account username
@@ -111,15 +109,15 @@ Changes your current directory to `path`. If your path is absolute (starts with 
 #### `nimbus.back()`
 Changes your current directory to a directory back.
 
-#### `nimbus.upload(src, dst, show_prog=True)`
+#### `nimbus.upload(src, dst=None, show_prog=True)`
 Uploads a file to the cloud. `src` is the source path of the file on your local filesystem you want to upload. `dst` is the destination on the cloud. If `show_prog=True`, a progress bar will be shown.
 
-Only `src` is required to be set to successfully upload. If you don't set a destination, the file will be uploaded to your current directory.
+If you don't set a destination, the file will be uploaded to your current directory.
 
-#### `nimbus.download(src, dst, show_prog=True)`
+#### `nimbus.download(src, dst=None, show_prog=True)`
 Downloads a file to your local filesystem. `src` is the source path of the file on the cloud you want to download. `dst` is the destination on the local filesystem. If `show_prog=True`, a progress bar will be shown.
 
-Only `src` is required to be set to successfully download. If you don't set a destination, the file will be downloaded to your current directory.
+If you don't set a destination, the file will be downloaded to your current directory.
 
 #### `nimbus.move(src, dst)`
 Moves a file from the source (`src`) to destination (`dst`). Both parameters need to be set.
