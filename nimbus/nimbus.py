@@ -13,6 +13,7 @@ import pkg_resources
 import yaml
 from yaml.loader import SafeLoader
 import re
+from pathvalidate import validate_filepath
 
 msg_key = Fernet.generate_key()
 fernet = Fernet(msg_key)
@@ -300,8 +301,7 @@ def download(src, dst=None, prog=True):
 
     for f in f_list:
         if os.path.commonpath([f[0], src]) == src.removesuffix('/').removeprefix('/'):
-            if not _is_valid_file_name(dst):
-                raise Exception(f"'/{dst}' is not a valid file name.")
+            validate_filepath(dst, platform='auto')
             files.append([f[0], dst])
 
     if files == []:

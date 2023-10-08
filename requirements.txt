@@ -1,5 +1,6 @@
 cryptography==39.0.2
 humanize==4.4.0
+pathvalidate==3.2.0
 pwinput==1.0.3
 PyYAML==6.0.1
 rsa==4.9
