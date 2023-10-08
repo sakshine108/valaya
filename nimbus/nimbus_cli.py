@@ -6,7 +6,9 @@ import pwinput
 import pkg_resources
 import yaml
 from yaml.loader import SafeLoader
-import argparse
+from argparse import ArgumentParser
+from pathvalidate import validate_filepath
+import hashlib
 
 config_path = pkg_resources.resource_filename('nimbus', 'config.yaml')
 
@@ -17,11 +19,24 @@ usr = config['username']
 pwd = config['password']
 
 def sign_in():
-    usr = input('Username: ')
+    usr = input('Email: ')
+
+    if not nimbus.is_valid_email(usr):
+        print('Invalid email.')
+        quit()
+
     pwd = pwinput.pwinput(prompt = 'Password: ')
+
+    if not nimbus.is_valid_passwd(pwd):
+        print('Invalid password.')
+        quit()
+
     key_path = input('Encryption key filepath: ')
 
+    pwd = hashlib.md5(bytes(pwd, 'utf-8')).hexdigest()
+
     try:
+        validate_filepath(key_path, platform='auto')
         nimbus.init(usr, pwd, key_path)
     except Exception as e:
         print('Error: ' + str(e))
@@ -30,7 +45,17 @@ def sign_in():
 
 def sign_up():
     user = input('Email: ')
+
+    if not nimbus.is_valid_email(user):
+        print('Invalid email.')
+        quit()
+
     passwd = pwinput.pwinput(prompt = 'Password: ')
+
+    if not nimbus.is_valid_passwd(passwd):
+        print('Invalid password.')
+        quit()
+
     passwd2 = pwinput.pwinput(prompt = 'Retype password: ')
 
     if passwd != passwd2:
@@ -39,7 +64,11 @@ def sign_up():
     
     key_path = input('Encryption key filepath: ')
 
+    passwd = hashlib.md5(bytes(passwd, 'utf-8')).hexdigest()
+
     try:
+        validate_filepath(key_path, platform='auto')
+
         nimbus.init(user='')
         nimbus.create_account(user, passwd)
 
@@ -72,20 +101,23 @@ def main():
     while True:
         args = input(f'{usr} {nimbus.current_dir()} ❯ ').split()
         
-        cmd = args[0]
-        args = args[1:]
+        cmd = ''
+        
+        if len(args) > 0:
+            cmd = args[0]
+            args = args[1:]
 
         if cmd == '':
             pass
         elif cmd == 'q':
-            parser = argparse.ArgumentParser(description='Quits the interface', prog='q')
+            parser = ArgumentParser(description='Quit the interface', prog='q')
             parser.parse_args(args)
 
             quit()
         elif cmd == 'ls':
-            parser = argparse.ArgumentParser(description='Lists files in a directory', prog='ls')
-            parser.add_argument("path", nargs='?', default='')
-            parser.add_argument("-l", "--long", action="store_true")
+            parser = ArgumentParser(description='List files in a directory', prog='ls')
+            parser.add_argument('path', nargs='?', default='')
+            parser.add_argument('-l', '--long', action='store_true', help='use a long listing format (show file size and time of upload)')
 
             try:
                 args = parser.parse_args(args)
@@ -107,8 +139,8 @@ def main():
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'cd':
-            parser = argparse.ArgumentParser(description='Changes the working directory', prog='cd')
-            parser.add_argument("path", nargs='?', default='/')
+            parser = ArgumentParser(description='Change the working directory', prog='cd')
+            parser.add_argument('path', nargs='?', default='/')
 
             try:
                 args = parser.parse_args(args)
@@ -118,7 +150,7 @@ def main():
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'back' or cmd == 'b':
-            parser = argparse.ArgumentParser(description='Changes to the previous directory', prog='b')
+            parser = ArgumentParser(description='Change to the previous directory', prog='b')
 
             try:
                 parser.parse_args(args)
@@ -128,9 +160,9 @@ def main():
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'mv':
-            parser = argparse.ArgumentParser(description='Moves or renames a file', prog='mv')
-            parser.add_argument("source")
-            parser.add_argument("dest")
+            parser = ArgumentParser(description='Move or rename a file or directory', prog='mv')
+            parser.add_argument('source')
+            parser.add_argument('dest')
 
             try:
                 args = parser.parse_args(args)
@@ -140,20 +172,21 @@ def main():
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'rm':
-            parser = argparse.ArgumentParser(description='Removes a file', prog='rm')
-            parser.add_argument("file")
+            parser = ArgumentParser(description='Move a file or directory into the trash folder', prog='rm')
+            parser.add_argument('-f', '--force', action='store_false', help='permanently delete a file or directory')
+            parser.add_argument('file')
 
             try:
                 args = parser.parse_args(args)
-                nimbus.remove(args.file)
+                nimbus.remove(args.file, args.force)
             except SystemExit as e:
                 print(e)
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'dl':
-            parser = argparse.ArgumentParser(description='Downloads a file', prog='dl')
-            parser.add_argument("source")
-            parser.add_argument("dest", nargs='?', default='')
+            parser = ArgumentParser(description='Download a file or directory', prog='dl')
+            parser.add_argument('source')
+            parser.add_argument('dest', nargs='?')
 
             try:
                 args = parser.parse_args(args)
@@ -163,9 +196,9 @@ def main():
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'ul':
-            parser = argparse.ArgumentParser(description='Uploads a file', prog='ul')
-            parser.add_argument("source")
-            parser.add_argument("dest", nargs='?', default='')
+            parser = ArgumentParser(description='Upload a file or directory', prog='ul')
+            parser.add_argument('source')
+            parser.add_argument('dest', nargs='?')
 
             try:
                 args = parser.parse_args(args)
@@ -175,45 +208,53 @@ def main():
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'quota':
-            parser = argparse.ArgumentParser(description='Shows how much storage is left', prog='quota')
+            parser = ArgumentParser(description='Show how much total and daily storage is left', prog='quota')
         
-            parser.add_argument("-l", "--long", action="store_true")
+            parser.add_argument('-l', '--long', action='store_true', help='use a long format (shows storage in bytes)')
 
             try:
                 args = parser.parse_args(args)
 
-                q1, q2 = nimbus.quota()
+                a, b, c = nimbus.quota()
 
-                a = humanize.naturalsize(q1)
-                b = humanize.naturalsize(q2)
+                unit = 'Bytes'
 
-                if args.long:
-                    a = str(q1) + ' Bytes'
-                    b = str(q2) + ' Bytes'
+                if not args.long:
+                    unit = 'GB'
+                    cv = 1000**3
 
-                print(f'{a} of {b} used.')
+                    a = round(a/cv, 2)
+                    b = round(b/cv, 2)
+                    c = round(c/cv, 2)
+
+                print(f'Total: {a}/{b} {unit}\nDaily: {c}/{b} {unit}')
             except SystemExit as e:
                 print(e)
         elif cmd == 'passwd':
-            parser = argparse.ArgumentParser(description='Changes the password', prog='passwd')
+            parser = ArgumentParser(description='Change your password', prog='passwd')
 
             try:
                 parser.parse_args(args)
 
-                inp = pwinput.pwinput(prompt = "Current password: ")
+                inp = pwinput.pwinput(prompt = 'Current password: ')
+                inp = hashlib.md5(bytes(inp, 'utf-8')).hexdigest()
 
                 if inp == pwd:
                     n1 = pwinput.pwinput(prompt = 'New password: ')
-                    n2 = pwinput.pwinput(prompt = 'Retype new password: ')
 
-                    if n1 == n2:
-                        pwd = n1
-                        nimbus.change_pwd(pwd)
-                        nimbus.init(passwd=pwd)
+                    if nimbus.is_valid_passwd(n1):
+                        n2 = pwinput.pwinput(prompt = 'Retype new password: ')
 
-                        print(f"Password changed to '{'*' * len(n1)}'.")
+                        if n1 == n2:
+                            pwd = hashlib.md5(bytes(n1, 'utf-8')).hexdigest()
+                            nimbus.change_pwd(pwd)
+                            nimbus.init(passwd=pwd)
+
+                            print(f'Password changed.')
+                        else:
+                            print('Passwords do not match.')
                     else:
-                        print('Passwords do not match.')
+                        print('Invalid password.')
                 else:
                     print('Incorrect password.')
             except SystemExit as e:
@@ -221,7 +262,7 @@ def main():
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'pwd':
-            parser = argparse.ArgumentParser(description='Shows the current directory', prog='pwd')
+            parser = ArgumentParser(description='Show the current directory', prog='pwd')
 
             try:
                 parser.parse_args(args)

@@ -1,6 +1,5 @@
 import socket
 import json
-import hashlib
 import os
 import threading
 from tqdm import tqdm
@@ -8,12 +7,12 @@ from datetime import datetime
 import uuid
 import rsa
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import pkg_resources
 import yaml
 from yaml.loader import SafeLoader
+import re
 
 msg_key = Fernet.generate_key()
 fernet = Fernet(msg_key)
@@ -72,7 +71,10 @@ def _is_valid_file_name(f):
 
     return True
 
-def _is_valid_passwd(passwd):
+def is_valid_email(email):
+    return re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b', email)
+
+def is_valid_passwd(passwd):
     l, u, s, d = 0, 0, 0, 0
 
     uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -80,7 +82,7 @@ def _is_valid_passwd(passwd):
     symbols = '~`!@#$%^&*()_-+={[}]|\:;"<,>.?/'
     digits = '0123456789'
 
-    if (len(passwd) >= 8):
+    if len(passwd) >= 8:
         for i in passwd:
             if (i in lowercase):
                 l+=1           
@@ -95,6 +97,9 @@ def _is_valid_passwd(passwd):
         return True
     else:
         return False
+    
+def is_valid_hash(s):
+    return re.fullmatch(r"([a-fA-F\d]{32})", s)
 
 def list_all(stats=False):
     global f_list
@@ -121,7 +126,7 @@ def list(path='', stats=False):
     f_list = _recv()
     f_list = sorted(f_list, key=lambda x: x[2], reverse=True)
 
-    f = c_dir + '/' + path
+    f = os.path.join(c_dir, path)
 
     if path.startswith('/'):
         f = path
@@ -182,7 +187,7 @@ def change_dir(path):
         c_dir = ''
         return
     else:
-        new_dir = c_dir + '/' + path
+        new_dir = os.path.join(c_dir, path)
 
         if path.startswith('/'):
             new_dir = path
@@ -218,39 +223,52 @@ def move(src, dst):
     src = src.removeprefix('/')
     dst = dst.removeprefix('/')
 
-    for i in range(len(f_list)):
-        if f_list[i][0] == src:
-            break
-        if i + 1 == len(f_list):
-            raise Exception(f"File '/{src}' does not exist.")
+    files = []
 
-    if not _is_valid_file_name(dst):
-        raise Exception(f"'/{dst}' is not a valid file name.")
+    for f in f_list:
+        if os.path.commonpath([f[0], src]) == src.removesuffix('/').removeprefix('/'):
+            if not _is_valid_file_name(dst):
+                raise Exception(f"'/{dst}' is not a valid file name.")
+            files.append([f[0], dst])
 
-    if src == dst:
-        raise Exception(f"Files '/{src}' and '/{dst}' are the same file.")
+    if len(files) == 0:
+        raise Exception(f"File or directory '/{src}' does not exist.")
 
-    _send('move', [src, dst])
+    fl = []
 
-    if _recv() == False:
-        raise Exception('Move failed.')
+    for f in f_list:
+        fl.append(f[0])
 
-def remove(file_path):
-    if not file_path.startswith('/'):
-        file_path = c_dir + '/' + file_path
+    if src not in fl:
+        for file in files:
+            file[1] = os.path.join(dst, os.path.basename(file[0]))
 
-    file_path = file_path.removeprefix('/')
+    for file in files:
+        _send('move', file)
+        _recv()
+    
+def remove(path, trash=True):
+    if trash and path.split('/')[0] != 'trash':
+        move(path, 'trash/')
+        return
+    
+    if not path.startswith('/'):
+        path = os.path.join(c_dir, path)
 
-    for i in range(len(f_list)):
-        if f_list[i][0] == file_path:
-            break
-        if i + 1 == len(f_list):
-            raise Exception(f"File '/{file_path}' does not exist.")
+    path = path.removeprefix('/')
 
-    _send('remove', file_path)
+    files = []
 
-    if _recv() == False:
-        raise Exception('Remove failed.')
+    for f in f_list:
+        if os.path.commonpath([f[0], path]) == path:
+            files.append(f[0])
+
+    if files == []:
+        raise Exception(f"File or directory '/{path}' does not exist.")
+
+    for file in files:
+        _send('remove', file)
+        _recv()
 
 def quota():
     list()
@@ -262,9 +280,9 @@ def quota():
 
     _send('maxbytes')
 
-    max_bytes = _recv()
+    max_bytes, daily_bytes = _recv()
 
-    return (total_bytes, max_bytes)
+    return (total_bytes, max_bytes, daily_bytes)
 
 def download(src, dst=None, prog=True):
     if not src.startswith('/'):
@@ -278,51 +296,68 @@ def download(src, dst=None, prog=True):
         if dst.endswith('/'):
             dst += src.split('/')[-1]
 
-    if len(f_list) == 0:
-        raise Exception(f"File '{src}' does not exist.")
+    files = []
 
-    for i in range(len(f_list)):
-        if f_list[i][0] == src:
-            break
-        if i + 1 == len(f_list):
-            raise Exception(f"File '{src}' does not exist.")
+    for f in f_list:
+        if os.path.commonpath([f[0], src]) == src.removesuffix('/').removeprefix('/'):
+            if not _is_valid_file_name(dst):
+                raise Exception(f"'/{dst}' is not a valid file name.")
+            files.append([f[0], dst])
 
-    _send('download', src)
+    if files == []:
+        raise Exception(f"File or directory '/{src}' does not exist.")
 
-    file_size = _recv()
-    file_size -= 16
-    current_file_size = 0
-
-    s.send(b'0')
-
-    if prog == True:
-        pbar = tqdm(total=int(file_size / 1024 / 1024), desc=dst.split('/')[-1], unit='MB')
-
-    if os.path.exists(dst):
-        os.remove(dst)
-
-    iv = s.recv(16)
-
-    cipher = Cipher(algorithms.AES(file_key), modes.GCM(iv), backend=default_backend())
-    decryptor = cipher.decryptor()
-
-    with open(dst, 'wb') as f:
-        while True:
-            chunk = s.recv(chunk_size)
-            decrypted_chunk = decryptor.update(chunk)
-            f.write(decrypted_chunk)
-
-            current_file_size += len(chunk)
-
-            if prog == True:
-                pbar.n = int(current_file_size / 1024 / 1024)
-                pbar.refresh()
-
-            if current_file_size == file_size:
-                break
+    fl = []
     
-    if prog == True:
-        pbar.close()
+    for f in f_list:
+        fl.append(f[0])
+
+    if src not in fl:
+        for file in files:
+            file[1] = os.path.join(dst, os.path.basename(file[0]))
+
+    for file in files:
+        _send('download', file[0])
+
+        file_size = _recv()
+        file_size -= 16
+        current_file_size = 0
+
+        s.send(b'0')
+
+        if prog == True:
+            pbar = tqdm(total=int(file_size / 1024 / 1024), desc=file[1].split('/')[-1], unit='MB')
+
+        dirname = os.path.dirname(file[1])
+
+        if dirname != '':
+            os.makedirs(dirname, exist_ok=True)
+
+        if os.path.exists(file[1]) and os.path.isfile(file[1]):
+            os.remove(file[1])
+
+        iv = s.recv(16)
+
+        cipher = Cipher(algorithms.AES(file_key), modes.GCM(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+
+        with open(file[1], 'wb') as f:
+            while True:
+                chunk = s.recv(chunk_size)
+                decrypted_chunk = decryptor.update(chunk)
+                f.write(decrypted_chunk)
+
+                current_file_size += len(chunk)
+
+                if prog == True:
+                    pbar.n = int(current_file_size / 1024 / 1024)
+                    pbar.refresh()
+
+                if current_file_size == file_size:
+                    break
+        
+        if prog == True:
+            pbar.close()
 
 def _send_bytes(s, src):
     iv = os.urandom(16)
@@ -342,85 +377,97 @@ def _send_bytes(s, src):
             encrypted_chunk = encryptor.update(chunk)
             s.send(encrypted_chunk)
 
-upload_prog = 0
-
 def upload(src, dst=None, show_prog=True):
-    global upload_prog
-    upload_prog = 0
-
     if not os.path.exists(src):
-        raise Exception(f"File '{src}' does not exist.")
-
+        raise Exception(f"File or directory '{src}' does not exist.")
+    
     if dst == None:
-        dst = c_dir + '/' + src.split('/')[-1]
+        dst = os.path.join(c_dir, os.path.basename(src))
     else:
         if not dst.startswith('/'):
-            dst = c_dir + '/' + dst
+            dst = os.path.join(c_dir, dst)
 
         if dst.endswith('/'):
-            dst += src.split('/')[-1]
+            dst += os.path.basename(src)
 
     dst = dst.removeprefix('/')
 
-    if not _is_valid_file_name(dst):
-        raise Exception(f"'{dst}' is not a valid file name.")
+    q1, q2, q3 = quota()
+    
+    files = []
+    
+    if os.path.isdir(src):
+        size = 0
+        
+        for foldername, subfolders, filenames in os.walk(src):
+            for f in filenames:
+                filepath = os.path.join(foldername, f)
+                filesize = os.path.getsize(filepath) + 16
+                size += filesize
 
-    file_size = os.path.getsize(src) + 16
+                dest = os.path.join(dst, f)
 
-    q1, q2 = quota()
-    if int(q1) + file_size > int(q2):
-        raise Exception('File is too large.')
-
-    _send('upload', [dst, file_size])
-
-    s.recv(1)
-
-    thread = threading.Thread(target=_send_bytes, args=(s, src))
-    thread.start()
-
-    buffer = ''
-
-    if show_prog:
-        pbar = tqdm(total=int(file_size / 1024 / 1024), desc=dst.split('/')[-1], unit='MB')
-
-    while True:
-        data = s.recv(20)
-        data = data.decode('utf-8')
-
-        buffer += data
-
-        while buffer.find('\n') != -1:
-            msg, buffer = buffer.split('\n', 1)
-
-            prog = msg
-
-            if prog == 'done':
-                if show_prog:
-                    pbar.close()
-                return
-            elif show_prog:
-                p = int(prog)
-                pbar.n = int(p / 1024 / 1024)
-                pbar.refresh()
+                if not _is_valid_file_name(dest):
+                    raise Exception(f"'{dest}' is not a valid file name.")
                 
-                upload_prog = p
+                files.append([filepath, dest, filesize])
+
+        if q1 + size > q2:
+            raise Exception('Directory is too large.')
+    else:
+        filesize = os.path.getsize(src) + 16
+
+        if q1 + filesize > q2:
+            raise Exception('File is too large.')
+        
+        files = [[src, dst, filesize]]
+    
+    for file in files:
+        _send('upload', file[1:])
+
+        s.recv(1)
+
+        thread = threading.Thread(target=_send_bytes, args=(s, file[0]))
+        thread.start()
+
+        buffer = ''
+
+        if show_prog:
+            pbar = tqdm(total=int(file[2] / 1024 / 1024), desc=file[1].split('/')[-1], unit='MB')
+
+        prog = None
+
+        while prog != 'done':
+            data = s.recv(20)
+            data = data.decode('utf-8')
+
+            buffer += data
+
+            while buffer.find('\n') != -1:
+                msg, buffer = buffer.split('\n', 1)
+
+                prog = msg
+
+                if prog == 'done':
+                    if show_prog:
+                        pbar.close()
+                elif show_prog:
+                    p = int(prog)
+                    pbar.n = int(p / 1024 / 1024)
+                    pbar.refresh()
 
 def change_pwd(new_pwd):
-    if not _is_valid_passwd(new_pwd):
-        raise Exception('Invalid password.')
-
-    new_pwd = hashlib.md5(bytes(new_pwd, 'utf-8')).hexdigest()
+    if not is_valid_hash(new_pwd):
+        raise Exception('Invalid hash.')
 
     _send('change_pwd', new_pwd)
-
-    if _recv() == False:
-        raise Exception('Password change failed.')
+    _recv()
 
 def create_account(usr, pwd):
-    if not _is_valid_passwd(pwd):
-        raise Exception('Invalid password.')
-
-    pwd = hashlib.md5(bytes(pwd, 'utf-8')).hexdigest()
+    if not is_valid_email(usr):
+        raise Exception('Invalid email.')
+    if not is_valid_hash(pwd):
+        raise Exception('Invalid hash.')
 
     _send('create_account', [usr, pwd])
     _recv()
@@ -468,6 +515,9 @@ def init(user=None, passwd=None, key_path=None):
 
         with open(config_path, 'w') as f:
             yaml.dump(config, f, sort_keys=False)
+    else:
+        if usr_c == None:
+            raise Exception('Not signed in.')
 
     if user == None:
         user = usr_c
@@ -481,6 +531,9 @@ def init(user=None, passwd=None, key_path=None):
     key = None
 
     if key_path != None:
+        if key_path.endswith('/'):
+            key_path += 'key.txt'
+            
         if os.path.exists(key_path):
             with open(key_path, "rb") as f:
                 key = f.read()
@@ -490,7 +543,7 @@ def init(user=None, passwd=None, key_path=None):
                 f.write(key)
 
     usr = user
-    pwd = hashlib.md5(bytes(passwd, 'utf-8')).hexdigest()
+    pwd = passwd
 
     file_key = key
 

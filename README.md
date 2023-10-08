@@ -1,6 +1,6 @@
 # Nimbus
 
-Nimbus is a low cost, secure, and customizable cloud storage system. Currently, we are giving free access to 20 GB of cloud storage for testing purposes.
+Nimbus is a low cost, secure, and customizable cloud storage system. Currently, we are giving free access to 15 GB of cloud storage for testing purposes.
 
 # Install and Run
 
@@ -14,7 +14,7 @@ pip install nimbus-cloud
 nimbus signup
 ```
 
-This command will ask you for an email, password, and encryption key filepath (e.g. /home/nimbus/key.txt), and create you an account. It will save your account details and encryption key filepath to the `config.yaml` file located in the package directory. It will create an encryption key file with the filepath you specified. If an existing encryption key file already exists with the same filepath, it will not be overwritten. **Make sure to backup your encryption key!**
+This command will ask you for an email, password, and encryption key filepath (e.g., /home/nimbus/key.txt), and create you an account. It will save your account details and encryption key filepath to the `config.yaml` file located in the package directory. It will create an encryption key file with the filepath you specified. If an existing encryption key file already exists with the same filepath, it will not be overwritten. **Make sure to backup your encryption key!**
 
 Sign in to Nimbus:
 ```
@@ -32,19 +32,19 @@ This system comes with a command line interface.
 
 ### List of Commands
 
-| Command                                         | Description                                                                                                                                   |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `b`                                             | Changes to the previous directory.                                                                                                            |
-| `cd [directory]`                                | Changes to a different directory.                                                                                                             |
-| `dl [source file path] [destination file path]` | Downloads a file. The source is the file path on the cloud and the destination is the file path on the local filesystem once its downloaded.  |
-| `ls [-l] [directory]`                           | Lists files in a directory. If `-l` is set, it will also show the file details.                                                               |
-| `mv [old file path] [new file path]`            | Moves or renames a file. The source is the file path on the cloud of the file you want to move and the destination is the modified file path. |
-| `passwd`                                        | Changes the password.                                                                                                                         |
-| `pwd`                                           | Shows the current directory.                                                                                                                  |
-| `q`                                             | Quits the interface.                                                                                                                          |
-| `quota [-l]`                                    | Shows how much storage is left. If `-l` is set, it will show in bytes.                                                                        |
-| `rm [file path]`                                | Removes a file.                                                                                                                               |
-| `ul [source file path] [destination file path]` | Uploads a file. The source is the file path on the local filesystem and the destination is the file path on the cloud once its uploaded.      |
+| Command                                         | Description                                                                                                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `b`                                             | Change to the previous directory.                                                                                                                      |
+| `cd [directory]`                                | Change to a different directory.                                                                                                                       |
+| `dl [source file path] [destination file path]` | Download a file or directory. The source is the path on the cloud and the destination is the path on the local filesystem once its downloaded.         |
+| `ls [-l] [directory]`                           | List files in a directory. <ul><li>`-l` Use a long listing format. (Additionally shows file size and time of upload.) </li></ul>                       |
+| `mv [old file path] [new file path]`            | Move or rename a file. The source is the path on the cloud of the file you want to move and the destination is the modified path.                      |
+| `passwd`                                        | Change your password.                                                                                                                                  |
+| `pwd`                                           | Show the current directory.                                                                                                                            |
+| `q`                                             | Quit the interface.                                                                                                                                    |
+| `quota [-l]`                                    | Show how much total and daily storage is left. <ul><li>`-l` Use a long format. (Shows storage in bytes.) </li></ul> |
+| `rm [-f] [file path]`                           | Move a file or directory into the trash folder. <ul><li>`-f` Permanently delete a file or directory. </li></ul>                                     |
+| `ul [source file path] [destination file path]` | Upload a file or directory. The source is the path on the local filesystem and the destination is the path on the cloud once its uploaded.             |
 
 # Privacy & Security
 
@@ -126,15 +126,15 @@ Moves a file from the source (`src`) to destination (`dst`). Both parameters nee
 Removes a file from the cloud. `file_path` is the path of the file you want to delete.
 
 #### `nimbus.quota()`
-Returns a tuple with the total amount of storage you have used so far in bytes, and the maximum amount of storage you have in bytes.
+Returns a tuple with the total amount of storage you have used so far in bytes, the maximum amount of storage you have in bytes, and the total amount of storage you have used so far in the day.
 
 #### `nimbus.change_pwd(new_pwd)`
 Changes your Nimbus account password to `new_pwd`.
 
 # More Info
 
-* There is a maximum quota of 20 GB
-* You can only upload and download a total of 20 GB per day
+* There is a maximum quota of 15 GB
+* You can only upload and download the amount of your maximum quota per day
 
 # Feedback
 
