@@ -95,7 +95,7 @@ Initializes the module. Sets all of the required variables. **This function need
 * `key_path` (str): File path of your encryption key
 
 #### `nimbus.list(path, stats=False)`
-Returns a list of your files and folders in the cloud. If your `path` is absolute (starts with a `/`), it lists relative to the root directory, otherwise it lists relative to your current directory. If `stats=True`, it will also return the file details (date/time of upload, file size).
+Returns a list of your files and folders in the cloud. If `stats=True`, it will also return the file details (date/time of upload, file size).
 
 #### `nimbus.list_all(stats=False)`
 Returns a list of the absolute paths of all your files. If `stats=True`, it will also return the file details (date/time of upload, file size).
@@ -104,26 +104,26 @@ Returns a list of the absolute paths of all your files. If `stats=True`, it will
 Returns the path of your current directory.
 
 #### `nimbus.change_dir(path)`
-Changes your current directory to `path`. If your path is absolute (starts with a `/`), it will change relative to the root directory, otherwise it will change it relative to your current directory.
+Changes your current directory to `path`.
 
 #### `nimbus.back()`
 Changes your current directory to a directory back.
 
 #### `nimbus.upload(src, dst=None, show_prog=True)`
-Uploads a file to the cloud. `src` is the source path of the file on your local filesystem you want to upload. `dst` is the destination on the cloud. If `show_prog=True`, a progress bar will be shown.
+Uploads a file or directory to the cloud. `src` is the source path on your local filesystem you want to upload. `dst` is the destination on the cloud. If `show_prog=True`, a progress bar will be shown.
 
-If you don't set a destination, the file will be uploaded to your current directory.
+If you don't set a destination, the file or directory will be uploaded to your current directory.
 
 #### `nimbus.download(src, dst=None, show_prog=True)`
-Downloads a file to your local filesystem. `src` is the source path of the file on the cloud you want to download. `dst` is the destination on the local filesystem. If `show_prog=True`, a progress bar will be shown.
+Downloads a file or directory to your local filesystem. `src` is the source path on the cloud you want to download. `dst` is the destination on the local filesystem. If `show_prog=True`, a progress bar will be shown.
 
-If you don't set a destination, the file will be downloaded to your current directory.
+If you don't set a destination, the file or directory will be downloaded to your current directory.
 
 #### `nimbus.move(src, dst)`
-Moves a file from the source (`src`) to destination (`dst`). Both parameters need to be set.
+Moves a file or directory from the source (`src`) to destination (`dst`). Both parameters are required to be set.
 
-#### `nimbus.remove(file_path)`
-Removes a file from the cloud. `file_path` is the path of the file you want to delete.
+#### `nimbus.remove(path, trash=True)`
+Removes a file or directory from the cloud. `path` is the path of the file or directory you want to delete.
 
 #### `nimbus.quota()`
 Returns a tuple with the total amount of storage you have used so far in bytes, the maximum amount of storage you have in bytes, and the total amount of storage you have used so far in the day.

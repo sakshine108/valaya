@@ -213,6 +213,8 @@ def back():
     c_dir = a
 
 def move(src, dst):
+    global f_list
+
     if not src.startswith('/'):
         src = c_dir + '/' + src
     if not dst.startswith('/'):
@@ -247,8 +249,13 @@ def move(src, dst):
     for file in files:
         _send('move', file)
         _recv()
+
+    _send('list')
+    f_list = _recv()
     
 def remove(path, trash=True):
+    global f_list
+
     if trash and path.split('/')[0] != 'trash':
         move(path, 'trash/')
         return
@@ -270,6 +277,9 @@ def remove(path, trash=True):
     for file in files:
         _send('remove', file)
         _recv()
+
+    _send('list')
+    f_list = _recv()
 
 def quota():
     list()
@@ -378,6 +388,8 @@ def _send_bytes(s, src):
             s.send(encrypted_chunk)
 
 def upload(src, dst=None, show_prog=True):
+    global f_list
+
     if not os.path.exists(src):
         raise Exception(f"File or directory '{src}' does not exist.")
     
@@ -455,6 +467,9 @@ def upload(src, dst=None, show_prog=True):
                     p = int(prog)
                     pbar.n = int(p / 1024 / 1024)
                     pbar.refresh()
+
+    _send('list')
+    f_list = _recv()
 
 def change_pwd(new_pwd):
     if not is_valid_hash(new_pwd):
