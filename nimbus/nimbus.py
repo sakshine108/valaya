@@ -491,6 +491,19 @@ def verify(code):
     _send('verify', code)
     _recv()
 
+def get_plans():
+    _send('plans')
+    plans = _recv()
+
+    for plan in plans:
+        plans[plan]['url'] += f'?prefilled_email={usr.replace("@", "%40")}'
+
+    return plans
+
+def get_customer_portal():
+    _send('customer_portal')
+    return _recv()
+
 def init(user=None, passwd=None, key_path=None):
     global s
     global usr

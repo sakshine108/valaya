@@ -18,6 +18,14 @@ with open(config_path) as f:
 usr = config['username']
 pwd = config['password']
 
+def password():
+    p = pwinput.pwinput(prompt = 'Password: ')
+    p = hashlib.md5(bytes(p, 'utf-8')).hexdigest()
+
+    if p != pwd:
+        print('Incorrect password.')
+        quit()
+
 def sign_in():
     usr = input('Email: ')
 
@@ -83,14 +91,79 @@ def sign_up():
 
     quit()
 
-if len(sys.argv) == 2:
-    if sys.argv[1] == 'signin':
-        sign_in()
-    elif sys.argv[1] == 'signup':
-        sign_up()
+def subscribe():
+    plans = nimbus.get_plans()
+
+    c = 1
+    for plan in plans:
+        print(f'{c}. {plan} ({plans[plan]["cost"]})')
+        c += 1
+
+    while True:
+        n = int(input('Choose a plan: '))
+        length = len(plans)
+
+        if n > length or n < 1:
+            print(f'Select plans 1-{length}.')
+        else:
+            break
+
+    c = 1
+    for plan in plans:
+        if c == n:
+            print(plans[plan]['url'])
+        c += 1
+
+    quit()
+
+def change_passwd():
+    n1 = pwinput.pwinput(prompt = 'New password: ')
+
+    if nimbus.is_valid_passwd(n1):
+        n2 = pwinput.pwinput(prompt = 'Retype new password: ')
+
+        if n1 == n2:
+            pwd = hashlib.md5(bytes(n1, 'utf-8')).hexdigest()
+            nimbus.change_pwd(pwd)
+            nimbus.init(passwd=pwd)
+
+            print(f'Password changed.')
+        else:
+            print('Passwords do not match.')
+    else:
+        print('Invalid password.')
+
+    quit()
+
+parser = ArgumentParser()
+g = parser.add_mutually_exclusive_group()
+
+g.add_argument('-si', '--signin', action='store_true', help='sign in to Nimbus')
+g.add_argument('-su', '--signup', action='store_true', help='sign up for Nimbus')
+g.add_argument('-sub', '--subscribe', action='store_true', help='subscribe to a Nimbus plan')
+g.add_argument('-man', '--manage', action='store_true', help='manage your Nimbus subscription')
+g.add_argument('-pw', '--password', action='store_true', help='change your Nimbus password')
+
+args = parser.parse_args()
 
 try:
-    nimbus.init()
+    if args.signin:
+        sign_in()
+    elif args.signup:
+        sign_up()
+    elif args.subscribe:
+        nimbus.init()
+        subscribe()
+    elif args.manage:
+        nimbus.init()
+        print(nimbus.get_customer_portal())
+        quit()
+    elif args.password:
+        nimbus.init()
+        password()
+        change_passwd()
+    else:
+        nimbus.init()
 except Exception as e:
     print('Error: ' + str(e))
     quit()
@@ -230,37 +303,6 @@ def main():
                 print(f'Total: {a}/{b} {unit}\nDaily: {c}/{b} {unit}')
             except SystemExit as e:
                 print(e)
-        elif cmd == 'passwd':
-            parser = ArgumentParser(description='Change your password', prog='passwd')
-
-            try:
-                parser.parse_args(args)
-
-                inp = pwinput.pwinput(prompt = 'Current password: ')
-                inp = hashlib.md5(bytes(inp, 'utf-8')).hexdigest()
-
-                if inp == pwd:
-                    n1 = pwinput.pwinput(prompt = 'New password: ')
-
-                    if nimbus.is_valid_passwd(n1):
-                        n2 = pwinput.pwinput(prompt = 'Retype new password: ')
-
-                        if n1 == n2:
-                            pwd = hashlib.md5(bytes(n1, 'utf-8')).hexdigest()
-                            nimbus.change_pwd(pwd)
-                            nimbus.init(passwd=pwd)
-
-                            print(f'Password changed.')
-                        else:
-                            print('Passwords do not match.')
-                    else:
-                        print('Invalid password.')
-                else:
-                    print('Incorrect password.')
-            except SystemExit as e:
-                print(e)
-            except Exception as e:
-                print('Error: ' + str(e))
         elif cmd == 'pwd':
             parser = ArgumentParser(description='Show the current directory', prog='pwd')
 
