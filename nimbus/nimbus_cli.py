@@ -1,7 +1,6 @@
 import nimbus
 import humanize
 import readline
-import sys
 import pwinput
 import pkg_resources
 import yaml
