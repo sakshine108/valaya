@@ -1,8 +1,7 @@
 cryptography==41.0.5
-humanize==4.8.0
+humanize==4.9.0
 pathvalidate==3.2.0
 pwinput==1.0.3
 PyYAML==6.0.1
-rsa==4.9
 setuptools==66.1.1
 tqdm==4.66.1

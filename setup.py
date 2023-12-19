@@ -19,17 +19,17 @@ def read_requirements(path):
     ]
 
 setup(
-    name="nimbus-cloud",
-    version=read("nimbus", "VERSION"),
+    name="valaya",
+    version=read("valaya", "VERSION"),
     description="A secure and customizable cloud storage system.",
-    url="https://github.com/sakshine108/nimbus/",
+    url="https://github.com/sakshine108/valaya/",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     author="sakshine108",
     packages=find_packages(),
-    package_data={"nimbus": ["config.yaml", "server_public_key.txt"]},
+    package_data={"valaya": ["config.yaml"]},
     install_requires=read_requirements("requirements.txt"),
     entry_points={
-        "console_scripts": ["nimbus = nimbus.nimbus_cli:main"]
+        "console_scripts": ["valaya = valaya.valaya_cli:main"]
     },
 )
