@@ -1,0 +1,5 @@
+user = ""
+
+[server]
+ip = "valaya.io"
+port = 4000

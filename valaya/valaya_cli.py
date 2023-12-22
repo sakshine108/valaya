@@ -3,6 +3,13 @@ import humanize
 import readline
 from argparse import ArgumentParser
 import pwinput
+from outdated import check_outdated
+
+is_outdated, latest_version = check_outdated('valaya', valaya.__version__)
+
+if is_outdated:
+    print(f"Your current version of Valaya ({valaya.__version__}) is outdated. Run 'pip install valaya -U' to update to the latest version ({latest_version}).")
+    quit()
 
 parser = ArgumentParser()
 g = parser.add_mutually_exclusive_group()
@@ -13,37 +20,36 @@ g.add_argument('-pw', '--password', action='store_true', help='sign in to Valaya
 
 args = parser.parse_args()
 
-if args.signup is not None:
-    conf = valaya.get_config()
-    ip, port, usr = conf.values()
+conf = valaya.get_config()
 
+if args.signup is not None:
     pw = pwinput.pwinput(prompt='Set password: ')
 
     if pwinput.pwinput(prompt='Retype password: ') == pw:
-        valaya.create_account(ip, port, args.signup[0], pw)
+        try:
+            valaya.create_account(conf.server.ip, conf.server.port, args.signup[0], pw)
 
-        code = input('Verification code: ')
-        valaya.verify_account(ip, port, code)
+            code = input('Verification code: ')
+            valaya.verify_account(conf.server.ip, conf.server.port, code)
+        except Exception as e:
+            print('Error: ' + str(e))
+            quit()
 
-        conf['user'] = args.signup[0]
+        conf.user = args.signup[0]
         valaya.set_config(conf)
     else:
         print('Passwords do not match.')
 
     quit()
 elif args.signin is not None:
-    conf = valaya.get_config()
-    conf['user'] = args.signin[0]
-
+    conf.user = args.signin[0]
     valaya.set_config(conf)
-
+    
     quit()
 elif args.password:
-    ip, port, usr = valaya.get_config().values()
-
     pw = pwinput.pwinput(prompt='Current password: ')
 
-    user = valaya.User(ip, port, usr, pw)
+    user = valaya.User(conf.server.ip, conf.server.port, conf.user, pw)
 
     new_pw = pwinput.pwinput(prompt='New password: ')
 
@@ -54,20 +60,35 @@ elif args.password:
 
     quit()
 
-ip, port, usr = valaya.get_config().values()
+if conf.user:
+    print(f"Signed in as '{conf.user}'.")
 
-print(f"Signed in as '{usr}'.")
+    pw = pwinput.pwinput(prompt='Password: ')
+    
+    if not pw:
+        print('Error: You must provide a password.')
+        quit()
+        
+    key_pw = pwinput.pwinput(prompt='Encryption password: ')
+        
+    if not key_pw:
+        print('Error: You must provide an encryption key password.')
+        quit()
 
-pw = pwinput.pwinput(prompt='Password: ')
-key_pw = pwinput.pwinput(prompt='Encryption password: ')
-
-user = valaya.User(ip, port, usr, pw, key_pw)
+    try:
+        user = valaya.User(conf.server.ip, conf.server.port, conf.user, pw, key_pw)
+    except Exception as e:
+        print('Error: ' + str(e))
+        quit()
+else:
+    print("Not signed in. Run 'valaya -si <your_username>' to sign in.")
+    quit()
 
 def main():
     while True:
-        args = input(f'{usr} /{user.c_dir} ❯ ').split()
+        args = input(f'{conf.user} /{user.c_dir} ❯ ').split()
         
-        cmd = ''
+        cmd = None
         
         if args:
             cmd, *args = args
@@ -99,8 +120,6 @@ def main():
                             print(f[0])
                     else:
                         print(f)
-            except SystemExit as e:
-                print(e)
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'cd':
@@ -110,8 +129,6 @@ def main():
             try:
                 args = parser.parse_args(args)
                 user.change_dir(args.path)
-            except SystemExit as e:
-                print(e)
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'mv':
@@ -122,8 +139,6 @@ def main():
             try:
                 args = parser.parse_args(args)
                 user.move(args.source, args.dest)
-            except SystemExit as e:
-                print(e)
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'rm':
@@ -134,8 +149,6 @@ def main():
             try:
                 args = parser.parse_args(args)
                 user.remove(args.file, args.force)
-            except SystemExit as e:
-                print(e)
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'dl':
@@ -146,8 +159,6 @@ def main():
             try:
                 args = parser.parse_args(args)
                 user.download(args.source, args.dest)
-            except SystemExit as e:
-                print(e)
             except Exception as e:
                 print('Error: ' + str(e))
         elif cmd == 'ul':
@@ -155,43 +166,35 @@ def main():
             parser.add_argument('source')
             parser.add_argument('dest', nargs='?')
 
-            try:
-                args = parser.parse_args(args)
-                user.upload(args.source, args.dest)
-            except SystemExit as e:
-                print(e)
-            except Exception as e:
-                print('Error: ' + str(e))
+            # try:
+            args = parser.parse_args(args)
+            user.upload(args.source, args.dest)
+            # except Exception as e:
+            #     print('Error: ' + str(e))
         elif cmd == 'quota':
             parser = ArgumentParser(description='Show how much total and daily storage is left', prog='quota')
         
             parser.add_argument('-l', '--long', action='store_true', help='use a long format (shows storage in bytes)')
 
-            try:
-                args = parser.parse_args(args)
+            args = parser.parse_args(args)
 
-                a, b, c = user.get_quota()
+            a, b, c = user.get_quota()
 
-                unit = 'Bytes'
+            unit = 'Bytes'
 
-                if not args.long:
-                    unit = 'GB'
-                    cv = 1000**3
+            if not args.long:
+                unit = 'GB'
+                cv = 1000**3
 
-                    a = round(a/cv, 2)
-                    b = round(b/cv, 2)
-                    c = round(c/cv, 2)
+                a = round(a/cv, 2)
+                b = round(b/cv, 2)
+                c = round(c/cv, 2)
 
-                print(f'Total: {a}/{b} {unit}\nDaily: {c}/{b} {unit}')
-            except SystemExit as e:
-                print(e)
+            print(f'Total: {a}/{b} {unit}\nDaily: {c}/{b} {unit}')
         elif cmd == 'pwd':
             parser = ArgumentParser(description='Show the current directory', prog='pwd')
 
-            try:
-                parser.parse_args(args)
-                print('/' + user.c_dir)
-            except SystemExit as e:
-                print(e)
+            parser.parse_args(args)
+            print('/' + user.c_dir)
         else:
             print(f"Error: Command '{cmd}' does not exist.")

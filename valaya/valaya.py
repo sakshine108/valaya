@@ -11,19 +11,23 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import pkg_resources
 from pathvalidate import validate_filepath
-import yaml
+import toml
 import base64
 import hashlib
+from dotwiz import DotWiz
 
-config_path = pkg_resources.resource_filename('valaya', 'config.yaml')
+with open(pkg_resources.resource_filename('valaya', 'VERSION'), 'r') as version_file:
+    __version__ = version_file.read().strip()
+
+config_path = pkg_resources.resource_filename('valaya', 'config.toml')
 
 def get_config():
-    with open(config_path, 'r') as file:
-        return yaml.safe_load(file)
+    with open(config_path, 'r') as f:
+        return DotWiz(toml.load(f))
     
 def set_config(new_config):
     with open(config_path, 'w') as f:
-        yaml.dump(new_config, f, sort_keys=False)
+        toml.dump(new_config, f)
     
 chunk_size = 1048576
 
@@ -84,12 +88,14 @@ class User:
 
         return res['res']
     
-    def __init__(self, ip: str, port: int, user: str, pw: str, key_pw: str = None):
+    def __init__(self, ip: str, port: int, user: str, pw: str, key_pw: str = None, max_threads = 6):
         self.user = user
 
         self.pw = pw
 
         self.c_dir = ''
+        
+        self.max_threads = max_threads
 
         self.key = base64.urlsafe_b64encode(hashlib.sha256(key_pw.encode('utf-8')).digest())
         self.key_fernet = Fernet(self.key)
@@ -100,6 +106,11 @@ class User:
 
         self.conn = context.wrap_socket(sock, server_hostname=ip)
         self.conn.connect((ip, port))
+        
+        self.ip, self.port = ip, port
+        
+        self._send('list')
+        self._recv()
 
     def list_all(self, stats=False):
         self._send('list')
@@ -359,13 +370,13 @@ class User:
                 if prog:
                     pbar.close()
 
-    def _send_bytes(self, src):
+    def _send_bytes(self, conn, src):
         iv = os.urandom(16)
 
         cipher = Cipher(algorithms.AES(base64.urlsafe_b64decode(self.key)), modes.GCM(iv), backend=default_backend())
         encryptor = cipher.encryptor()
 
-        self.conn.send(iv)
+        conn.send(iv)
 
         with open(src, 'rb') as f:
             while True:
@@ -375,7 +386,53 @@ class User:
                     break
 
                 encrypted_chunk = encryptor.update(chunk)
-                self.conn.send(encrypted_chunk)
+                conn.send(encrypted_chunk)
+                
+    def _upload_thread(self, conn, file):
+        self.threads += 1
+        
+        filename = file[1]
+
+        file[1] = self.key_fernet.encrypt(filename.encode()).decode()
+
+        _send(conn, self.user, self.pw, 'upload', file[1:])
+
+        conn.recv(1)
+
+        threading.Thread(target=self._send_bytes, args=(conn, file[0])).start()
+
+        total_prog = 0
+        buffer = ''
+
+        while total_prog != 'done':
+            data = conn.recv(20)
+            data = data.decode('utf-8')
+
+            buffer += data
+
+            while buffer.find('\n') != -1:
+                msg, buffer = buffer.split('\n', 1)
+                
+                if not msg == 'done':
+                    msg = int(msg)
+                    self.prog += msg - total_prog
+                    
+                total_prog = msg
+                
+        self.threads -= 1
+        
+    def _prog_thread(self, total_size, name):
+        self.prog = 0
+        
+        pbar = None
+        
+        pbar = tqdm(total=int(total_size / 1024 / 1024), desc=name, unit='MB')
+        
+        while self.prog < total_size:
+            pbar.n = int(self.prog / 1024 / 1024)
+            pbar.refresh()
+                    
+        pbar.close()
 
     def upload(self, src, dst, show_prog=True):
         if not os.path.exists(src):
@@ -388,70 +445,69 @@ class User:
         elif dst.endswith('/'):
             dst = os.path.join(dst, os.path.basename(src)).lstrip('/')
 
-        q1, q2, q3 = self.get_quota()
+        q1, q2, _ = self.get_quota()
         
         files = []
         
+        total_size = 0
+        
         if os.path.isdir(src):
-            size = 0
-            
-            for foldername, subfolders, filenames in os.walk(src):
+            for foldername, _, filenames in os.walk(src):
                 for f in filenames:
                     filepath = os.path.join(foldername, f)
                     filesize = os.path.getsize(filepath) + 16
-                    size += filesize
+                    total_size += filesize
                     
                     relative_path = filepath.removeprefix(os.path.commonpath([src, filepath])).lstrip('/')
                     dst_path = os.path.join(dst, relative_path)
 
                     files.append([filepath, dst_path, filesize])
 
-            if q1 + size > q2:
+            if q1 + total_size > q2:
                 raise Exception('Directory is too large.')
         else:
-            filesize = os.path.getsize(src) + 16
+            total_size = filesize = os.path.getsize(src) + 16
 
             if q1 + filesize > q2:
                 raise Exception('File is too large.')
             
             files = [[src, dst, filesize]]
+            
+        self._send('list')
+        f_list = self._recv()
+                    
+        files_set = {file[1] for file in files}
+
+        for f in f_list:
+            decoded = self.key_fernet.decrypt(f[0]).decode()
+
+            if decoded in files_set:
+                self._send('remove', f[0])
+                self._recv()
+
+        if show_prog:
+            threading.Thread(target=self._prog_thread, args=(total_size, dst)).start()
+            
+        self.threads = 0
         
-        for file in files:
-            filename = file[1]
+        if len(files) == 1:
+            threading.Thread(target=self._upload_thread, args=(self.conn, files[0])).start()
+        else:
+            for file in files:
+                while self.threads > self.max_threads:
+                    pass
+            
+                context = ssl.create_default_context()
 
-            file[1] = self.key_fernet.encrypt(filename.encode()).decode()
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-            self._send('upload', file[1:])
-
-            self.conn.recv(1)
-
-            thread = threading.Thread(target=self._send_bytes, args=(file[0],))
-            thread.start()
-
-            if show_prog:
-                pbar = tqdm(total=int(file[2] / 1024 / 1024), desc=filename.split('/')[-1], unit='MB')
-
-            prog = None
-            buffer = ''
-
-            while prog != 'done':
-                data = self.conn.recv(20)
-                data = data.decode('utf-8')
-
-                buffer += data
-
-                while buffer.find('\n') != -1:
-                    msg, buffer = buffer.split('\n', 1)
-
-                    prog = msg
-
-                    if show_prog:
-                        if prog == 'done':
-                            pbar.close()
-                        else:
-                            p = int(prog)
-                            pbar.n = int(p / 1024 / 1024)
-                            pbar.refresh()
+                conn = context.wrap_socket(s, server_hostname=self.ip)
+                conn.connect((self.ip, self.port))
+            
+                threading.Thread(target=self._upload_thread, args=(conn, file)).start()
+                
+        while not self.threads == 0:
+            pass
 
     def change_pw(self, new_pw):
         self._send('change_pw', new_pw)
