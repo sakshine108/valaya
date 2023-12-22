@@ -1,4 +1,5 @@
 import valaya
+from valaya import config
 import humanize
 import readline
 from argparse import ArgumentParser
@@ -20,36 +21,34 @@ g.add_argument('-pw', '--password', action='store_true', help='sign in to Valaya
 
 args = parser.parse_args()
 
-conf = valaya.get_config()
-
 if args.signup is not None:
     pw = pwinput.pwinput(prompt='Set password: ')
 
     if pwinput.pwinput(prompt='Retype password: ') == pw:
         try:
-            valaya.create_account(conf.server.ip, conf.server.port, args.signup[0], pw)
+            valaya.create_account(config.server.ip, config.server.port, args.signup[0], pw)
 
             code = input('Verification code: ')
-            valaya.verify_account(conf.server.ip, conf.server.port, code)
+            valaya.verify_account(config.server.ip, config.server.port, code)
         except Exception as e:
             print('Error: ' + str(e))
             quit()
 
-        conf.user = args.signup[0]
-        valaya.set_config(conf)
+        config.account.username = args.signup[0]
+        config.set(config)
     else:
         print('Passwords do not match.')
 
     quit()
 elif args.signin is not None:
-    conf.user = args.signin[0]
-    valaya.set_config(conf)
+    config.account.username = args.signin[0]
+    config.set(config)
     
     quit()
 elif args.password:
     pw = pwinput.pwinput(prompt='Current password: ')
 
-    user = valaya.User(conf.server.ip, conf.server.port, conf.user, pw)
+    user = valaya.User(config.server.ip, config.server.port, config.account.username, pw)
 
     new_pw = pwinput.pwinput(prompt='New password: ')
 
@@ -60,8 +59,8 @@ elif args.password:
 
     quit()
 
-if conf.user:
-    print(f"Signed in as '{conf.user}'.")
+if config.account.username:
+    print(f"Signed in as '{config.account.username}'.")
 
     pw = pwinput.pwinput(prompt='Password: ')
     
@@ -76,7 +75,7 @@ if conf.user:
         quit()
 
     try:
-        user = valaya.User(conf.server.ip, conf.server.port, conf.user, pw, key_pw)
+        user = valaya.User(config.server.ip, config.server.port, config.account.username, pw, key_pw)
     except Exception as e:
         print('Error: ' + str(e))
         quit()
@@ -86,7 +85,7 @@ else:
 
 def main():
     while True:
-        args = input(f'{conf.user} /{user.c_dir} ❯ ').split()
+        args = input(f'{config.account.username} /{user.c_dir} ❯ ').split()
         
         cmd = None
         
@@ -166,11 +165,11 @@ def main():
             parser.add_argument('source')
             parser.add_argument('dest', nargs='?')
 
-            # try:
-            args = parser.parse_args(args)
-            user.upload(args.source, args.dest)
-            # except Exception as e:
-            #     print('Error: ' + str(e))
+            try:
+                args = parser.parse_args(args)
+                user.upload(args.source, args.dest)
+            except Exception as e:
+                print('Error: ' + str(e))
         elif cmd == 'quota':
             parser = ArgumentParser(description='Show how much total and daily storage is left', prog='quota')
         

@@ -14,20 +14,22 @@ from pathvalidate import validate_filepath
 import toml
 import base64
 import hashlib
-from dotwiz import DotWiz
-
-with open(pkg_resources.resource_filename('valaya', 'VERSION'), 'r') as version_file:
-    __version__ = version_file.read().strip()
+from munch import DefaultMunch
 
 config_path = pkg_resources.resource_filename('valaya', 'config.toml')
 
-def get_config():
-    with open(config_path, 'r') as f:
-        return DotWiz(toml.load(f))
+def _set_config(new_config):
+    del new_config['set']
     
-def set_config(new_config):
     with open(config_path, 'w') as f:
         toml.dump(new_config, f)
+
+with open(config_path, 'r') as f:
+    config = DefaultMunch.fromDict(toml.load(f))
+    
+config.set = _set_config
+    
+__version__ = config.version
     
 chunk_size = 1048576
 
@@ -110,7 +112,14 @@ class User:
         self.ip, self.port = ip, port
         
         self._send('list')
-        self._recv()
+        
+        f_list = self._recv()
+        
+        if len(f_list) >= 1:
+            try:
+                self.key_fernet.decrypt(f_list[0][0]).decode()
+            except:
+                raise Exception(f"Incorrect encryption password.")
 
     def list_all(self, stats=False):
         self._send('list')
@@ -298,7 +307,55 @@ class User:
 
         return total_bytes, max_bytes, daily_bytes
     
-    def download(self, src, dst=None, prog=True):
+    def _download_thread(self, conn, file):
+        self.threads += 1
+        
+        _send(conn, self.user, self.pw, 'download', file[2])
+        file_size = _recv(conn)
+        file_size -= 16
+        current_file_size = 0
+
+        conn.send(b'\x10')
+
+        # if show_prog:
+        #     pbar = tqdm(total=int(file_size / 1024 / 1024), desc=file[1].split('/')[-1], unit='MB')
+
+        os.makedirs(os.path.dirname(file[1]), exist_ok=True)
+
+        if os.path.isfile(file[1]):
+            os.remove(file[1])
+
+        iv = conn.recv(16)
+
+        cipher = Cipher(algorithms.AES(base64.urlsafe_b64decode(self.key)), modes.GCM(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+
+        with open(file[1], 'wb') as file:
+            while True:
+                chunk = conn.recv(chunk_size)
+                decrypted_chunk = decryptor.update(chunk)
+                file.write(decrypted_chunk)
+
+                current_file_size += len(chunk)
+                self.prog += len(chunk)
+
+                if current_file_size == file_size:
+                    break
+            
+        self.threads -= 1
+            
+    def _dl_prog_thread(self, total_size, name):
+        self.prog = 0
+        
+        pbar = tqdm(total=int(total_size / 1024 / 1024), desc=name, unit='MB')
+        
+        while self.prog < total_size:
+            pbar.n = int(self.prog / 1024 / 1024)
+            pbar.refresh()
+                
+        pbar.close()
+    
+    def download(self, src, dst=None, show_prog=True):
         if not src.startswith('/'):
             src = os.path.join(self.c_dir, src.lstrip('/')).strip('/')
         else:
@@ -311,11 +368,13 @@ class User:
         elif dst.endswith('/'):
             dst = os.path.join(dst, os.path.basename(src))
 
-        self._send('list')
-        f_list = self._recv()
-
         files = []
         filenames = []
+        
+        total_size = 0
+        
+        self._send('list')
+        f_list = self._recv()
 
         for f in f_list:
             f.append(self.key_fernet.decrypt(f[0]).decode().strip('/'))
@@ -324,51 +383,40 @@ class User:
             if os.path.commonpath([f[3], src]) == src:
                 validate_filepath(dst, platform='auto')
                 files.append([f[3], dst, f[0]])
+                total_size += f[1] - 16
 
         if files == []:
             raise Exception(f"File or directory '/{src}' does not exist.")
-
-        for f in files:
-            if src not in filenames:
-                f[1] = os.path.join(dst, f[0].removeprefix(src).lstrip('/'))
-
-            self._send('download', f[2])
-            file_size = self._recv()
-            file_size -= 16
-            current_file_size = 0
-
-            self.conn.send(b'0')
-
-            if prog:
-                pbar = tqdm(total=int(file_size / 1024 / 1024), desc=f[1].split('/')[-1], unit='MB')
-
-            os.makedirs(os.path.dirname(f[1]), exist_ok=True)
-
-            if os.path.isfile(f[1]):
-                os.remove(f[1])
-
-            iv = self.conn.recv(16)
-
-            cipher = Cipher(algorithms.AES(base64.urlsafe_b64decode(self.key)), modes.GCM(iv), backend=default_backend())
-            decryptor = cipher.decryptor()
-
-            with open(f[1], 'wb') as file:
-                while True:
-                    chunk = self.conn.recv(chunk_size)
-                    decrypted_chunk = decryptor.update(chunk)
-                    file.write(decrypted_chunk)
-
-                    current_file_size += len(chunk)
-
-                    if prog:
-                        pbar.n = int(current_file_size / 1024 / 1024)
-                        pbar.refresh()
-
-                    if current_file_size == file_size:
-                        break
+        
+        if show_prog:
+            threading.Thread(target=self._dl_prog_thread, args=(total_size, os.basename(dst))).start()
             
-                if prog:
-                    pbar.close()
+        self.threads = 0
+
+        if len(files) == 1:
+            if src not in filenames:
+                files[0][1] = os.path.join(dst, files[0][0].removeprefix(src).lstrip('/'))
+                    
+            threading.Thread(target=self._download_thread, args=(self.conn, files[0])).start()
+        else:
+            for file in files:
+                while self.threads > self.max_threads:
+                    pass
+                
+                if src not in filenames:
+                    file[1] = os.path.join(dst, file[0].removeprefix(src).lstrip('/'))
+                    
+                context = ssl.create_default_context()
+
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+                conn = context.wrap_socket(s, server_hostname=self.ip)
+                conn.connect((self.ip, self.port))
+
+                threading.Thread(target=self._download_thread, args=(conn, file)).start()
+            
+        while not self.threads == 0:
+            pass
 
     def _send_bytes(self, conn, src):
         iv = os.urandom(16)
@@ -421,10 +469,8 @@ class User:
                 
         self.threads -= 1
         
-    def _prog_thread(self, total_size, name):
+    def _ul_prog_thread(self, total_size, name):
         self.prog = 0
-        
-        pbar = None
         
         pbar = tqdm(total=int(total_size / 1024 / 1024), desc=name, unit='MB')
         
@@ -486,7 +532,7 @@ class User:
                 self._recv()
 
         if show_prog:
-            threading.Thread(target=self._prog_thread, args=(total_size, dst)).start()
+            threading.Thread(target=self._ul_prog_thread, args=(total_size, os.basename(dst))).start()
             
         self.threads = 0
         

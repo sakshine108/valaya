@@ -1,4 +1,7 @@
-user = ""
+version = "0.0.4"
+
+[account]
+username = ""
 
 [server]
 ip = "valaya.io"
