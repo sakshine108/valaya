@@ -317,9 +317,6 @@ class User:
 
         conn.send(b'\x10')
 
-        # if show_prog:
-        #     pbar = tqdm(total=int(file_size / 1024 / 1024), desc=file[1].split('/')[-1], unit='MB')
-
         os.makedirs(os.path.dirname(file[1]), exist_ok=True)
 
         if os.path.isfile(file[1]):
@@ -400,7 +397,7 @@ class User:
             threading.Thread(target=self._download_thread, args=(self.conn, files[0])).start()
         else:
             for file in files:
-                while self.threads > self.max_threads:
+                while self.threads >= self.max_threads:
                     pass
                 
                 if src not in filenames:
@@ -540,7 +537,7 @@ class User:
             threading.Thread(target=self._upload_thread, args=(self.conn, files[0])).start()
         else:
             for file in files:
-                while self.threads > self.max_threads:
+                while self.threads >= self.max_threads:
                     pass
             
                 context = ssl.create_default_context()
