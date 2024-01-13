@@ -55,18 +55,26 @@ def _recv(s):
     return res['res']
 
 def create_account(ip, port, user, pw):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((ip, port))
+    context = ssl.create_default_context()
 
-    _send(s, '', '', 'create_account', [user, pw])
-    _recv(s)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    conn = context.wrap_socket(sock, server_hostname=ip)
+    conn.connect((ip, port))
+
+    _send(conn, '', '', 'create_account', [user, pw])
+    _recv(conn)
 
 def verify_account(ip, port, code):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((ip, port))
+    context = ssl.create_default_context()
 
-    _send(s, '', '', 'verify', code)
-    _recv(s)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    conn = context.wrap_socket(sock, server_hostname=ip)
+    conn.connect((ip, port))
+
+    _send(conn, '', '', 'verify', code)
+    _recv(conn)
     
 class User:
     def _send(self, cmd, args = None):
