@@ -394,7 +394,7 @@ class User:
             raise Exception(f"File or directory '/{src}' does not exist.")
         
         if show_prog:
-            threading.Thread(target=self._dl_prog_thread, args=(total_size, os.basename(dst))).start()
+            threading.Thread(target=self._dl_prog_thread, args=(total_size, os.path.basename(dst))).start()
             
         self.threads = 0
 
@@ -537,7 +537,7 @@ class User:
                 self._recv()
 
         if show_prog:
-            threading.Thread(target=self._ul_prog_thread, args=(total_size, os.basename(dst))).start()
+            threading.Thread(target=self._ul_prog_thread, args=(total_size, os.path.basename(dst))).start()
             
         self.threads = 0
         
