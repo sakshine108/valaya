@@ -324,8 +324,9 @@ class User:
         current_file_size = 0
 
         conn.send(b'\x10')
-
-        os.makedirs(os.path.dirname(file[1]), exist_ok=True)
+        
+        if os.path.dirname(file[1]):
+            os.makedirs(os.path.dirname(file[1]), exist_ok=True)
 
         if os.path.isfile(file[1]):
             os.remove(file[1])
@@ -359,7 +360,7 @@ class User:
             pbar.refresh()
                 
         pbar.close()
-    
+
     def download(self, src, dst=None, show_prog=True):
         if not src.startswith('/'):
             src = os.path.join(self.c_dir, src.lstrip('/')).strip('/')
@@ -372,7 +373,7 @@ class User:
             dst = os.path.join(os.getcwd(), os.path.basename(src))
         elif dst.endswith('/'):
             dst = os.path.join(dst, os.path.basename(src))
-
+            
         files = []
         filenames = []
         
@@ -389,12 +390,9 @@ class User:
                 validate_filepath(dst, platform='auto')
                 files.append([f[3], dst, f[0]])
                 total_size += f[1] - 16
-
+                
         if files == []:
             raise Exception(f"File or directory '/{src}' does not exist.")
-        
-        if show_prog:
-            threading.Thread(target=self._dl_prog_thread, args=(total_size, os.path.basename(dst))).start()
             
         self.threads = 0
 
@@ -402,7 +400,10 @@ class User:
             if src not in filenames:
                 files[0][1] = os.path.join(dst, files[0][0].removeprefix(src).lstrip('/'))
                     
-            threading.Thread(target=self._download_thread, args=(self.conn, files[0])).start()
+            if os.access(os.path.dirname(os.path.join(os.getcwd(), files[0][1])), os.W_OK):
+                threading.Thread(target=self._download_thread, args=(self.conn, files[0])).start()
+            else:
+                raise Exception(f"Permission denied: '{os.path.join(os.getcwd(), files[0][1])}'")
         else:
             for file in files:
                 while self.threads >= self.max_threads:
@@ -411,16 +412,22 @@ class User:
                 if src not in filenames:
                     file[1] = os.path.join(dst, file[0].removeprefix(src).lstrip('/'))
                     
-                context = ssl.create_default_context()
+                if os.access(os.path.dirname(os.path.join(os.getcwd(), file[1])), os.W_OK):
+                    context = ssl.create_default_context()
 
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-                conn = context.wrap_socket(s, server_hostname=self.ip)
-                conn.connect((self.ip, self.port))
+                    conn = context.wrap_socket(s, server_hostname=self.ip)
+                    conn.connect((self.ip, self.port))
 
-                threading.Thread(target=self._download_thread, args=(conn, file)).start()
+                    threading.Thread(target=self._download_thread, args=(conn, file)).start()
+                else:
+                    raise Exception(f"Permission denied: '{os.path.join(os.getcwd(), file[1])}'")
+                
+        if show_prog:
+            threading.Thread(target=self._dl_prog_thread, args=(total_size, os.path.basename(dst))).start()
             
-        while not self.threads == 0:
+        while self.prog < total_size:
             pass
 
     def _send_bytes(self, conn, src):

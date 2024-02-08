@@ -15,9 +15,10 @@ if is_outdated:
 parser = ArgumentParser()
 g = parser.add_mutually_exclusive_group()
 
-g.add_argument('-su', '--signup', nargs=1, metavar=('email'), help='sign up for Valaya')
-g.add_argument('-si', '--signin', nargs=1, metavar=('email'), help='sign in to Valaya')
-g.add_argument('-pw', '--password', action='store_true', help='sign in to Valaya')
+g.add_argument('-su', '--signup', nargs=1, metavar=('email'), help='sign up')
+g.add_argument('-si', '--signin', nargs=1, metavar=('email'), help='sign in')
+g.add_argument('-pw', '--password', action='store_true', help='change your password')
+g.add_argument('-v', '--version', action='store_true', help='show the current installed version')
 
 args = parser.parse_args()
 
@@ -58,6 +59,8 @@ elif args.password:
         print('Passwords do not match.')
 
     quit()
+elif args.version:
+    print(valaya.__version__)
 
 if config.account.username:
     print(f"Signed in as '{config.account.username}'.")
