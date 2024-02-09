@@ -47,20 +47,29 @@ elif args.signin is not None:
     
     quit()
 elif args.password:
-    pw = pwinput.pwinput(prompt='Current password: ')
+    if config.account.username:
+        print(f"Signed in as '{config.account.username}'.")
+        
+        pw = pwinput.pwinput(prompt='Current password: ')
+        
+        try:
+            user = valaya.User(config.server.ip, config.server.port, config.account.username, pw)
 
-    user = valaya.User(config.server.ip, config.server.port, config.account.username, pw)
+            new_pw = pwinput.pwinput(prompt='New password: ')
 
-    new_pw = pwinput.pwinput(prompt='New password: ')
-
-    if pwinput.pwinput(prompt='Retype new password: ') == new_pw:
-        user.change_pw(new_pw)
+            if pwinput.pwinput(prompt='Retype new password: ') == new_pw:
+                user.change_pw(new_pw)
+            else:
+                print('Passwords do not match.')
+        except Exception as e:
+            print('Error: ' + str(e))
     else:
-        print('Passwords do not match.')
+        print('Not signed in.')
 
     quit()
 elif args.version:
     print(valaya.__version__)
+    quit()
 
 if config.account.username:
     print(f"Signed in as '{config.account.username}'.")

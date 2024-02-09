@@ -107,9 +107,6 @@ class User:
         
         self.max_threads = max_threads
 
-        self.key = base64.urlsafe_b64encode(hashlib.sha256(key_pw.encode('utf-8')).digest())
-        self.key_fernet = Fernet(self.key)
-
         context = ssl.create_default_context()
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -120,14 +117,17 @@ class User:
         self.ip, self.port = ip, port
         
         self._send('list')
-        
         f_list = self._recv()
         
-        if len(f_list) >= 1:
-            try:
-                self.key_fernet.decrypt(f_list[0][0]).decode()
-            except:
-                raise Exception(f"Incorrect encryption password.")
+        if key_pw:
+            self.key = base64.urlsafe_b64encode(hashlib.sha256(key_pw.encode('utf-8')).digest())
+            self.key_fernet = Fernet(self.key)
+            
+            if len(f_list) >= 1:
+                try:
+                    self.key_fernet.decrypt(f_list[0][0]).decode()
+                except:
+                    raise Exception(f"Incorrect encryption password.")
 
     def list_all(self, stats=False):
         self._send('list')
