@@ -329,7 +329,8 @@ class User:
             os.makedirs(os.path.dirname(file[1]), exist_ok=True)
 
         if os.path.isfile(file[1]):
-            os.remove(file[1])
+            name, ex = os.path.splitext(file[1])
+            file[1] = name + '_copy' + ex
 
         iv = conn.recv(16)
 
@@ -403,7 +404,7 @@ class User:
             if os.access(os.path.dirname(os.path.join(os.getcwd(), files[0][1])), os.W_OK):
                 threading.Thread(target=self._download_thread, args=(self.conn, files[0])).start()
             else:
-                raise Exception(f"Permission denied: '{os.path.join(os.getcwd(), files[0][1])}'")
+                raise Exception(f"Invalid file destination: '{os.path.join(os.getcwd(), files[0][1])}'")
         else:
             for file in files:
                 while self.threads >= self.max_threads:
@@ -422,7 +423,7 @@ class User:
 
                     threading.Thread(target=self._download_thread, args=(conn, file)).start()
                 else:
-                    raise Exception(f"Permission denied: '{os.path.join(os.getcwd(), file[1])}'")
+                    raise Exception(f"Invalid file destination: '{os.path.join(os.getcwd(), file[1])}'")
                 
         if show_prog:
             threading.Thread(target=self._dl_prog_thread, args=(total_size, os.path.basename(dst))).start()
@@ -534,14 +535,13 @@ class User:
         self._send('list')
         f_list = self._recv()
                     
-        files_set = {file[1] for file in files}
-
         for f in f_list:
             decoded = self.key_fernet.decrypt(f[0]).decode()
 
-            if decoded in files_set:
-                self._send('remove', f[0])
-                self._recv()
+            for file in files:
+                if decoded == file[1]:
+                    name, ex = os.path.splitext(file[1])
+                    file[1] = name + '_copy' + ex
 
         if show_prog:
             threading.Thread(target=self._ul_prog_thread, args=(total_size, os.path.basename(dst))).start()

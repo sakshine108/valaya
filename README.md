@@ -1,6 +1,6 @@
 ## Valaya
 
-Valaya is a secure and customizable cloud storage system built with an open source client. We currently offer free 15 GB of cloud storage, with more monthly plans coming later.
+Valaya is a secure and customizable cloud storage system built with an open source client. We currently offer 15 GB of cloud storage for free, with monthly plans coming later.
 
 ![](https://github.com/sakshine108/valaya/blob/main/demo.gif)
 
@@ -24,6 +24,8 @@ valaya -su your_email
 ```
 valaya
 ```
+
+Done! Now you can access 15 GB of cloud storage.
 
 ---
 
@@ -72,7 +74,7 @@ All commands availible in the VCLI:
 All files uploaded to Valaya are encrypted with AES-256. Only those who know your encryption password can decrypt your files. Your encryption password is not stored anywhere. Additionally, this system uses TLS to secure all communications between the client and server.
 
 ### Password Storage
-We store your account passwords on our server using bcrypt. For security reasons, your passwords are not stored on your systems.
+We store your account passwords on our server securely using bcrypt. For security reasons, your passwords are not stored on your systems.
 
 ---
 

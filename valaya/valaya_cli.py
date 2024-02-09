@@ -92,7 +92,7 @@ if config.account.username:
         print('Error: ' + str(e))
         quit()
 else:
-    print("Not signed in. Run 'valaya -si <your_username>' to sign in.")
+    print("Not signed in. Run 'valaya -si <your_email>' to sign in. To sign up, run 'valaya -su <your_email>'.")
     quit()
 
 def main():
