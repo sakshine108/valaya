@@ -1,3 +1,6 @@
+> [!WARNING]  
+> Deprecated.
+
 ## Valaya
 
 Valaya is a secure and customizable cloud storage system built with an open source client. We currently offer 15 GB of cloud storage for free, with monthly plans coming later.
